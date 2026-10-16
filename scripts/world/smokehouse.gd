@@ -10,7 +10,8 @@ var progress := 0.0
 
 func _init() -> void:
 	title = "Ahumadero"
-	size = Vector2(130, 110)
+	size = Vector2(112, 112)
+	sprite_name = "ahumadero"
 	fill = Color(0.35, 0.25, 0.2)
 
 

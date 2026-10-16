@@ -40,6 +40,7 @@ var trees: Array = []
 
 func _ready() -> void:
 	y_sort_enabled = true
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	_build_collision()
 	_plant_trees()
 	shade = CanvasModulate.new()
@@ -68,6 +69,7 @@ func _ready() -> void:
 
 	for data in GameState.saved_finaos:
 		spawn_finao(data)
+	Audio.music("musica_noche" if GameState.is_night() else "musica_dia")
 	GameState.phase_changed.connect(_on_phase_changed)
 	GameState.day_started.connect(_on_day_started)
 
@@ -116,7 +118,12 @@ func _plant_trees() -> void:
 		trees.append(Vector2(rng.randf_range(40, MAP_SIZE.x - 40), rng.randf_range(20, FOREST_BOTTOM - 30)))
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	water_timer += delta
+	if water_timer > 0.6:
+		water_timer = 0.0
+		water_frame = 1 - water_frame
+		queue_redraw()
 	var d := GameState.darkness()
 	var c := Color.WHITE.lerp(Color(0.22, 0.25, 0.42), d)
 	if GameState.phase == GameState.Phase.ATARDECER:
@@ -141,6 +148,7 @@ func _physics_process(delta: float) -> void:
 
 func _send_wave(count: int) -> void:
 	GameState.say("¡Suben ahogados del mar! Ola %d de 3." % (waves_sent + 1))
+	Audio.play("cuerno", 0.0, 0.0)
 	for i in count:
 		spawn_enemy("ahogado", Vector2(randf_range(1800, 2700), randf_range(1700, 1900)), true)
 
@@ -265,6 +273,7 @@ func reanimate() -> void:
 
 
 func _on_phase_changed(phase: int) -> void:
+	Audio.music("musica_noche" if phase == GameState.Phase.NOCHE else "musica_dia")
 	if phase == GameState.Phase.ATARDECER:
 		if GameState.is_horde_night():
 			GameState.say("Atardece. Esta noche es de Marea Bruja: construye barricadas en la playa.")
@@ -320,6 +329,7 @@ func _drop_body(pos: Vector2) -> void:
 
 
 func enemy_killed(e, source: Node) -> void:
+	Audio.play("muere_ente", -2.0)
 	if e.kind == "mar":
 		GameState.change_meter("cerro", 1.0)
 		if randf() < 0.5:
@@ -418,34 +428,49 @@ class Burst:
 		draw_circle(Vector2.ZERO, radius * (1.2 - life), Color(color, color.a * life / 0.35))
 
 
+const TILE_SCALE := 4.0
+const HOUSES := [
+	["casa_0", Vector2(1825, 975)], ["casa_1", Vector2(2675, 985)], ["casa_2", Vector2(2875, 1115)],
+	["casa_1", Vector2(1775, 1315)], ["casa_0", Vector2(2625, 1315)],
+]
+
+var water_frame := 0
+var water_timer := 0.0
+
+
+func _tile(sprite: String, r: Rect2) -> void:
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2(TILE_SCALE, TILE_SCALE))
+	draw_texture_rect(Unit.texture(sprite), Rect2(r.position / TILE_SCALE, r.size / TILE_SCALE), true)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## Dibuja un sprite con la base (los pies) en `base`.
+func _sprite(sprite: String, base: Vector2, scale_factor := TILE_SCALE) -> void:
+	var tex := Unit.texture(sprite)
+	var s := Vector2(tex.get_size()) * scale_factor
+	draw_set_transform(base - Vector2(s.x / 2.0, s.y), 0.0, Vector2(scale_factor, scale_factor))
+	draw_texture(tex, Vector2.ZERO)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
 func _draw() -> void:
-	# Monte, pradera, playa y mar.
-	draw_rect(Rect2(0, 0, MAP_SIZE.x, FOREST_BOTTOM), Color(0.13, 0.27, 0.16))
-	draw_rect(Rect2(0, FOREST_BOTTOM, MAP_SIZE.x, BEACH_TOP - FOREST_BOTTOM), Color(0.33, 0.45, 0.25))
-	draw_rect(Rect2(0, BEACH_TOP, MAP_SIZE.x, SEA_TOP - BEACH_TOP), Color(0.72, 0.66, 0.5))
-	draw_rect(Rect2(0, SEA_TOP, MAP_SIZE.x, MAP_SIZE.y - SEA_TOP), Color(0.12, 0.27, 0.4))
-	for i in 12:
-		var y := SEA_TOP + 40.0 + i * 38.0
-		draw_line(Vector2(0, y), Vector2(MAP_SIZE.x, y + 8.0), Color(1, 1, 1, 0.06), 3.0)
-	for t in trees:
-		draw_circle(t + Vector2(6, 10), 34, Color(0, 0, 0, 0.2))
-		draw_circle(t, 34, Color(0.08, 0.2, 0.11))
-		draw_circle(t + Vector2(-8, -8), 18, Color(0.16, 0.33, 0.18))
-	# El palafito de Abdón, con sus pilotes hacia la playa.
-	draw_rect(Rect2(650, 980, 620, 330), Color(0.4, 0.3, 0.22, 0.55))
-	draw_rect(Rect2(650, 980, 620, 330), Color(0.2, 0.14, 0.1), false, 4.0)
+	# Monte, pradera, playa y mar, con texturas que se repiten.
+	_tile("monte", Rect2(0, 0, MAP_SIZE.x, FOREST_BOTTOM))
+	_tile("pasto", Rect2(0, FOREST_BOTTOM, MAP_SIZE.x, BEACH_TOP - FOREST_BOTTOM))
+	_tile("arena", Rect2(0, BEACH_TOP, MAP_SIZE.x, SEA_TOP - BEACH_TOP))
+	_tile("mar_%d" % water_frame, Rect2(0, SEA_TOP, MAP_SIZE.x, MAP_SIZE.y - SEA_TOP))
+	draw_rect(Rect2(0, SEA_TOP - 6, MAP_SIZE.x, 10), Color(0.85, 0.9, 0.95, 0.35))
+	_tile("camino", Rect2(1270, 1124, 1630, 52))
+	_tile("camino", Rect2(2224, 1100, 52, 300))
+	# El palafito de Abdón: piso de tablas sobre pilotes.
 	for x in range(680, 1260, 80):
-		draw_line(Vector2(x, 1310), Vector2(x, 1380), Color(0.25, 0.18, 0.12), 8.0)
-	draw_rect(Rect2(780, 1215, 180, 70), Color(0.3, 0.22, 0.16, 0.6))
-	# Quicaví: casas, la iglesia de madera y el camino.
-	draw_line(Vector2(1270, 1150), Vector2(2900, 1150), Color(0.55, 0.48, 0.35), 50.0)
-	for h in [Vector2(1750, 920), Vector2(2600, 930), Vector2(2800, 1060), Vector2(1700, 1260), Vector2(2550, 1260)]:
-		draw_rect(Rect2(h, Vector2(150, 110)), Color(0.6, 0.45, 0.3))
-		draw_colored_polygon(PackedVector2Array([h, h + Vector2(75, -50), h + Vector2(150, 0)]), Color(0.45, 0.25, 0.2))
-	var c := church_pos
-	draw_rect(Rect2(c + Vector2(-110, -60), Vector2(220, 170)), Color(0.85, 0.75, 0.45))
-	draw_colored_polygon(PackedVector2Array([c + Vector2(-120, -60), c + Vector2(0, -130), c + Vector2(120, -60)]), Color(0.5, 0.3, 0.25))
-	draw_rect(Rect2(c + Vector2(-25, -220), Vector2(50, 100)), Color(0.85, 0.75, 0.45))
-	draw_line(c + Vector2(0, -260), c + Vector2(0, -225), Color(0.2, 0.15, 0.1), 6.0)
-	draw_line(c + Vector2(-14, -248), c + Vector2(14, -248), Color(0.2, 0.15, 0.1), 6.0)
-	draw_rect(Rect2(c + Vector2(-25, 50), Vector2(50, 60)), Color(0.3, 0.2, 0.15))
+		draw_rect(Rect2(x - 5, 1300, 10, 80), Color(0.25, 0.18, 0.12))
+	_tile("tablas", Rect2(648, 976, 624, 336))
+	draw_rect(Rect2(648, 976, 624, 336), Color(0.12, 0.08, 0.06), false, 4.0)
+	draw_rect(Rect2(780, 1212, 184, 76), Color(0, 0, 0, 0.25))
+	# Quicaví: casas de tejuelas y la iglesia de madera.
+	for h in HOUSES:
+		_sprite(h[0], h[1], 5.0)
+	_sprite("iglesia", church_pos + Vector2(0, 110))
+	for i in trees.size():
+		_sprite("arbol_%d" % (i % 2), trees[i] + Vector2(0, 50))

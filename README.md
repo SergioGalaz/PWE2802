@@ -7,7 +7,7 @@ Juego de gestión de recursos y caza de entes para tablets Android, ambientado e
 
 ## Estado
 
-Primera demo jugable: los tres primeros días del acto I, con gráficos provisorios hechos con formas simples.
+Primera demo jugable: los tres primeros días del acto I, con arte pixel art provisorio, música y efectos de sonido.
 
 - Pesca con minijuego en el muelle, ahumadero, leña y el almacén de Lucio.
 - Mesa de brujería para reanimar Finaos. Cada uno tiene un oficio, un rol de combate, frescura y moral.
@@ -63,9 +63,22 @@ godot --path . -- --screenshot=/tmp/noche.png --night --touch
 
 GitHub Actions corre la prueba automática en cada PR.
 
+## Arte y sonido
+
+Los sprites pixel art, la música (un vals chilote de día y un zumbido de mar de noche) y los efectos se generan con un script, para poder ajustarlos y volver a crearlos:
+
+```
+python3 -m pip install pillow numpy
+python3 tools/generate_assets.py
+```
+
+Escribe en `assets/sprites` y `assets/audio`. Godot los importa con filtro de píxel nítido, y la música queda en bucle.
+
 ## Estructura
 
 - `scripts/autoload/`: estado de la partida (`game_state.gd`) y entrada táctil/mando (`input_setup.gd`).
 - `scripts/world/`: el mapa, la noche y las estaciones (muelle, ahumadero, mesa de brujería, barricadas...).
 - `scripts/units/`: Abdón, los Finaos y los entes.
 - `scripts/ui/`: la interfaz, los controles táctiles, la pesca y la rueda de órdenes.
+- `scripts/autoload/audio.gd`: efectos y música, con fundido entre el día y la noche.
+- `tools/generate_assets.py`: genera los sprites y los sonidos.

@@ -10,6 +10,9 @@ var size := Vector2(120, 90)
 var fill := Color(0.45, 0.32, 0.22)
 var title := ""
 var title_label: Label
+## Sprite pixel art. Si no hay, se dibuja un rectángulo del color `fill`.
+var sprite_name := ""
+var sprite_scale := 4.0
 
 
 func _ready() -> void:
@@ -42,6 +45,15 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
+	var tex := Unit.texture(sprite_name) if sprite_name != "" else null
+	if tex != null:
+		var s := Vector2(tex.get_size()) * sprite_scale
+		draw_set_transform(Vector2(0, s.y / 2.0 - 4.0), 0.0, Vector2(1.0, 0.3))
+		draw_circle(Vector2.ZERO, s.x * 0.45, Color(0, 0, 0, 0.25))
+		draw_set_transform(-s / 2.0, 0.0, Vector2(sprite_scale, sprite_scale))
+		draw_texture(tex, Vector2.ZERO)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		return
 	var r := Rect2(-size / 2.0, size)
 	draw_rect(Rect2(r.position + Vector2(6, 8), r.size), Color(0, 0, 0, 0.25))
 	draw_rect(r, fill)

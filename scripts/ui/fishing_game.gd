@@ -81,12 +81,14 @@ func _cast() -> void:
 	if casts_left == 0:
 		return
 	casts_left -= 1
+	Audio.play("chapuzon")
 	var msg := ""
 	if absf(marker - zone_center) <= zone_width / 2.0:
 		var n := randi_range(1, 3) + (1 if GameState.is_low_tide() else 0)
 		caught += n
 		GameState.add("pescado", n)
 		msg = "¡Salieron %d!" % n
+		Audio.play("pesca", 0.0, 0.0)
 		GameState.story("primera_pesca", [
 			["Don Fermín", "Buena. Ese pescado llévelo al ahumadero; fresco se pudre, ahumado se vende."],
 		])

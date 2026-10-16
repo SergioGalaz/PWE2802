@@ -22,6 +22,7 @@ var lantern: PointLight2D
 
 func _ready() -> void:
 	display_name = "Abdón"
+	sprite_name = "abdon"
 	color = Color(0.25, 0.5, 0.95)
 	radius = 24.0
 	setup_body(LAYER_PLAYER, LAYER_TERRAIN | LAYER_BARRICADE)
@@ -76,6 +77,8 @@ func _physics_process(delta: float) -> void:
 	if aim.length() > 0.35 and not GameState.ui_blocking:
 		facing = aim.normalized()
 	move_and_slide()
+	if absf(facing.x) > 0.2:
+		face_left = facing.x < 0.0
 	_update_nearest()
 	if accepts_input:
 		if Input.is_action_just_pressed("attack"):
@@ -113,6 +116,7 @@ func attack() -> void:
 		return
 	attack_cd = 0.4
 	swing = 0.18
+	Audio.play("arpon")
 	use_energy(0.5)
 	var enemies: Array = get_tree().get_nodes_in_group("enemies")
 	for e in enemies:
@@ -136,6 +140,7 @@ func cast_spell() -> void:
 		return
 	GameState.change_meter("juicio", -SPELL_COST)
 	GameState.change_meter("marea", 3.0)
+	Audio.play("revisorio")
 	var center := global_position + facing * 150.0
 	world.spawn_burst(center, SPELL_RADIUS, Color(0.6, 0.3, 0.9, 0.5))
 	var enemies: Array = get_tree().get_nodes_in_group("enemies")
@@ -166,9 +171,10 @@ func revive(at: Vector2) -> void:
 
 func _draw() -> void:
 	super._draw()
-	var tip := facing * (radius + 14)
-	var side := facing.orthogonal() * 9
-	draw_colored_polygon(PackedVector2Array([tip, facing * radius + side, facing * radius - side]), Color(0.95, 0.95, 1.0))
+	# Marca de hacia dónde apunta el arpón.
+	var tip := facing * (radius + 30)
+	var side := facing.orthogonal() * 7
+	draw_colored_polygon(PackedVector2Array([tip, facing * (radius + 16) + side, facing * (radius + 16) - side]), Color(0.95, 0.95, 1.0, 0.8))
 	if swing > 0.0:
 		var a := facing.angle()
 		draw_arc(Vector2.ZERO, ATTACK_RANGE * 0.8, a - 0.9, a + 0.9, 16, Color(1, 1, 1, swing * 4.0), 6.0)

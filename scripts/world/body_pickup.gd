@@ -4,7 +4,8 @@ extends Interactable
 func _init() -> void:
 	title = "Ahogado"
 	prompt = "Recoger el cuerpo"
-	size = Vector2(70, 30)
+	size = Vector2(64, 20)
+	sprite_name = "cuerpo"
 	fill = Color(0.35, 0.5, 0.55)
 	interact_radius = 90.0
 

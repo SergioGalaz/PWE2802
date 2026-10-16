@@ -1,6 +1,5 @@
 # Godot
 .godot/
-*.import
 export.cfg
 export_credentials.cfg
 *.apk

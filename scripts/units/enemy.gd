@@ -32,10 +32,13 @@ func setup(enemy_type: String, is_horde: bool) -> void:
 	radius = t["radius"]
 	color = t["color"]
 	kind = t["kind"]
+	sprite_name = type
 
 
 func _ready() -> void:
 	setup_body(LAYER_ENEMY, LAYER_BARRICADE)
+	# Las hordas son muchas: sin nombre encima, para no tapar la pelea.
+	label.visible = not horde
 	add_to_group("enemies")
 	home = global_position
 	wander_target = home
@@ -131,6 +134,3 @@ func _draw() -> void:
 	if pulse > 0.0:
 		draw_circle(Vector2.ZERO, pulse_radius * (1.0 - pulse), pulse_color)
 	super._draw()
-	# Ojos rojos para distinguirlos de los Finaos.
-	draw_circle(Vector2(-6, -5), 3.5, Color(1, 0.2, 0.15))
-	draw_circle(Vector2(6, -5), 3.5, Color(1, 0.2, 0.15))

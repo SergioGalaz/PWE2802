@@ -6,7 +6,8 @@ const COST := {"cuerpo": 1, "sal": 1, "brea": 1}
 
 func _init() -> void:
 	title = "Mesa de brujería"
-	size = Vector2(120, 80)
+	size = Vector2(112, 80)
+	sprite_name = "mesa_brujeria"
 	fill = Color(0.3, 0.22, 0.35)
 
 
@@ -25,9 +26,10 @@ func interact(player: Node) -> void:
 	player.use_energy(10.0)
 	GameState.change_meter("juicio", -5.0)
 	GameState.change_meter("marea", 1.0)
+	Audio.play("reanimar", 0.0, 0.0)
 	world.reanimate()
 
 
 func _draw() -> void:
 	super._draw()
-	draw_circle(Vector2(0, -5), 22, Color(0.55, 0.2, 0.7, 0.5 + 0.3 * sin(Time.get_ticks_msec() / 300.0)))
+	draw_circle(Vector2(0, -22), 26, Color(0.55, 0.2, 0.7, 0.15 + 0.1 * sin(Time.get_ticks_msec() / 300.0)))

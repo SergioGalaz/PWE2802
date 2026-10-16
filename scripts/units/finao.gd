@@ -46,6 +46,7 @@ func _ready() -> void:
 	hp = minf(hp, max_hp) if hp > 0.0 else max_hp
 	color = stats["color"]
 	radius = 20.0
+	sprite_name = "finao"
 	setup_body(LAYER_FINAO, LAYER_TERRAIN)
 	add_to_group("finaos")
 	add_to_group("interactables")
@@ -189,8 +190,7 @@ func new_day() -> bool:
 
 func _draw() -> void:
 	super._draw()
-	# Ojos de ahogado, para que se note que no están del todo vivos.
-	draw_circle(Vector2(-7, -4), 3.5, Color(0.9, 0.95, 0.8))
-	draw_circle(Vector2(7, -4), 3.5, Color(0.9, 0.95, 0.8))
+	# Una franja del color del rol a los pies, para distinguir la cuadrilla.
+	draw_rect(Rect2(-14, radius + 2, 28, 5), color)
 	if frescura < 40.0:
 		draw_arc(Vector2.ZERO, radius + 3, 0.0, TAU * frescura / 100.0, 16, Color(0.6, 0.8, 0.3), 2.0)

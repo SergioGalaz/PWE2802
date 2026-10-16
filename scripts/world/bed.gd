@@ -3,7 +3,8 @@ extends Interactable
 
 func _init() -> void:
 	title = "Cama"
-	size = Vector2(110, 70)
+	size = Vector2(112, 72)
+	sprite_name = "cama"
 	fill = Color(0.55, 0.45, 0.4)
 
 

@@ -146,4 +146,5 @@ func _finish() -> void:
 	])
 	var failed := checks.values().count(false)
 	print("SMOKE %s" % ("TODO OK" if failed == 0 else "%d FALLAS" % failed))
+	Unit._texture_cache.clear()
 	get_tree().quit(0 if failed == 0 else 1)

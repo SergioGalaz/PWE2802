@@ -28,6 +28,7 @@ func _ready() -> void:
 
 func show_title() -> void:
 	_clear_game()
+	Audio.music("musica_dia")
 	title = CanvasLayer.new()
 	add_child(title)
 	var bg := ColorRect.new()

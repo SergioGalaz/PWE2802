@@ -67,4 +67,5 @@ func _process(_delta: float) -> void:
 		var img := get_viewport().get_texture().get_image()
 		img.save_png(ProjectSettings.globalize_path(path) if path.begins_with("res://") or path.begins_with("user://") else path)
 		print("Captura guardada en ", path)
+		Unit._texture_cache.clear()
 		get_tree().quit()

@@ -351,6 +351,7 @@ func _button(parent: Control, text: String, action: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(760, 84)
+	b.pressed.connect(func() -> void: Audio.play("clic", -6.0))
 	b.pressed.connect(action)
 	parent.add_child(b)
 	return b
@@ -475,6 +476,10 @@ func _build_menu() -> void:
 	menu_panel = _make_panel("Pausa")
 	var box := menu_panel.get_child(0) as VBoxContainer
 	_button(box, "Seguir jugando", close_modal)
+	var music_button := _button(box, "Música: Sí", func() -> void: pass)
+	music_button.pressed.connect(func() -> void:
+		Audio.set_music_enabled(not Audio.music_enabled)
+		music_button.text = "Música: %s" % ("Sí" if Audio.music_enabled else "No"))
 	_button(box, "Guardar partida", func() -> void:
 		GameState.save_game(world.serialize_finaos())
 		GameState.say("Partida guardada.")

@@ -8,7 +8,8 @@ var uses_left := USES_PER_DAY
 
 func _init() -> void:
 	title = "Leña del monte"
-	size = Vector2(120, 60)
+	size = Vector2(112, 56)
+	sprite_name = "lena"
 	fill = Color(0.42, 0.3, 0.18)
 
 

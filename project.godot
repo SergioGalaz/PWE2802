@@ -20,6 +20,7 @@ config/icon="res://icon.svg"
 
 InputSetup="*res://scripts/autoload/input_setup.gd"
 GameState="*res://scripts/autoload/game_state.gd"
+Audio="*res://scripts/autoload/audio.gd"
 
 [display]
 
@@ -37,6 +38,7 @@ common/physics_ticks_per_second=60
 
 [rendering]
 
+textures/canvas_textures/default_texture_filter=0
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true

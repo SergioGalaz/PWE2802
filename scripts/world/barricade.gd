@@ -11,7 +11,8 @@ var body: StaticBody2D
 
 func _init() -> void:
 	title = "Barricada"
-	size = Vector2(180, 34)
+	size = Vector2(184, 48)
+	sprite_name = "barricada"
 	fill = Color(0.5, 0.35, 0.2)
 	interact_radius = 130.0
 
@@ -72,7 +73,5 @@ func _draw() -> void:
 		draw_rect(r, Color(1, 1, 1, 0.25), false, 3.0)
 		return
 	super._draw()
-	for i in 4:
-		draw_line(Vector2(-80 + i * 52, -16), Vector2(-60 + i * 52, 16), Color(0.3, 0.2, 0.1), 4.0)
-	draw_rect(Rect2(-90, 24, 180, 6), Color(0, 0, 0, 0.6))
-	draw_rect(Rect2(-90, 24, 180 * hp / MAX_HP, 6), Color(0.9, 0.7, 0.2))
+	draw_rect(Rect2(-90, 30, 180, 6), Color(0, 0, 0, 0.6))
+	draw_rect(Rect2(-90, 30, 180 * hp / MAX_HP, 6), Color(0.9, 0.7, 0.2))

@@ -4,7 +4,9 @@ extends Interactable
 func _init() -> void:
 	title = "Almacén de Lucio"
 	prompt = "Comprar y vender"
-	size = Vector2(200, 140)
+	size = Vector2(160, 150)
+	sprite_name = "almacen"
+	sprite_scale = 5.0
 	fill = Color(0.55, 0.3, 0.25)
 
 
