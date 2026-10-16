@@ -7,7 +7,7 @@ Juego de gestión de recursos y caza de entes para tablets Android, ambientado e
 
 ## Estado
 
-Primera demo jugable: los tres primeros días del acto I, con arte pixel art provisorio, música y efectos de sonido.
+Primera demo jugable: los tres primeros días del acto I, con pixel art a 32 píxeles, música y efectos de sonido.
 
 - Pesca con minijuego en el muelle, ahumadero, leña y el almacén de Lucio.
 - Mesa de brujería para reanimar Finaos. Cada uno tiene un oficio, un rol de combate, frescura y moral.
@@ -54,6 +54,8 @@ La prueba automática juega los tres días a velocidad alta y revisa la pesca, e
 godot --headless --path . --fixed-fps 60 -- --smoke
 ```
 
+Los personajes miden 32 píxeles y todo usa una paleta propia de 30 colores (mar, neblina, monte, alerce, lana y fuego), definida en `tools/arte.py`. Al guardar, cada píxel se ajusta a la paleta.
+
 Para sacar capturas (necesita pantalla, o `xvfb-run` en Linux):
 
 ```
@@ -82,3 +84,4 @@ Escribe en `assets/sprites` y `assets/audio`. Godot los importa con filtro de p�
 - `scripts/ui/`: la interfaz, los controles táctiles, la pesca y la rueda de órdenes.
 - `scripts/autoload/audio.gd`: efectos y música, con fundido entre el día y la noche.
 - `tools/generate_assets.py`: genera los sprites y los sonidos.
+- `tools/arte.py`: la paleta y el dibujo de cada sprite.

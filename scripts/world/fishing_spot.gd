@@ -42,7 +42,7 @@ func _draw() -> void:
 	# Tablas del muelle, con pilotes hacia el agua.
 	for x in [-38.0, 38.0]:
 		draw_rect(Rect2(x - 5, -100, 10, 220), Color(0.25, 0.18, 0.12))
-	draw_set_transform(Vector2(-48, -100), 0.0, Vector2(4, 4))
-	draw_texture_rect(Unit.texture("tablas_v"), Rect2(0, 0, 24, 50), true)
+	draw_set_transform(Vector2(-48, -100), 0.0, Vector2(2, 2))
+	draw_texture_rect(Unit.texture("tablas_v"), Rect2(0, 0, 48, 100), true)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_rect(Rect2(-48, -100, 96, 200), Color(0, 0, 0, 0.5), false, 3.0)

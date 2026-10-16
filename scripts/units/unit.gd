@@ -21,10 +21,10 @@ var flash := 0.0
 var dead := false
 var world: Node
 var label: Label
-## Sprite pixel art (dos cuadros: quieto y paso). Si no hay, se dibuja un círculo.
+## Sprite pixel art de 32 píxeles (dos cuadros: quieto y paso). Si no hay, se dibuja un círculo.
 var sprite_name := ""
 var frames: Array[Texture2D] = []
-var sprite_scale := 4.0
+var sprite_scale := 2.0
 var face_left := false
 var walk_time := 0.0
 
@@ -55,7 +55,7 @@ func setup_body(layer: int, mask: int) -> void:
 	label = Label.new()
 	label.text = display_name
 	label.size = Vector2(240, 30)
-	label.position = Vector2(-120, -radius - 44 if frames.is_empty() else radius - 16.0 * sprite_scale - 34.0)
+	label.position = Vector2(-120, -radius - 44 if frames.is_empty() else radius - frames[0].get_height() * sprite_scale - 34.0)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 20)
 	label.add_theme_color_override("font_outline_color", Color.BLACK)

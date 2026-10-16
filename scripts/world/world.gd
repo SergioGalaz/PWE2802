@@ -428,7 +428,7 @@ class Burst:
 		draw_circle(Vector2.ZERO, radius * (1.2 - life), Color(color, color.a * life / 0.35))
 
 
-const TILE_SCALE := 4.0
+const TILE_SCALE := 2.0
 const HOUSES := [
 	["casa_0", Vector2(1825, 975)], ["casa_1", Vector2(2675, 985)], ["casa_2", Vector2(2875, 1115)],
 	["casa_1", Vector2(1775, 1315)], ["casa_0", Vector2(2625, 1315)],
@@ -470,7 +470,7 @@ func _draw() -> void:
 	draw_rect(Rect2(780, 1212, 184, 76), Color(0, 0, 0, 0.25))
 	# Quicaví: casas de tejuelas y la iglesia de madera.
 	for h in HOUSES:
-		_sprite(h[0], h[1], 5.0)
+		_sprite(h[0], h[1], 2.5)
 	_sprite("iglesia", church_pos + Vector2(0, 110))
 	for i in trees.size():
 		_sprite("arbol_%d" % (i % 2), trees[i] + Vector2(0, 50))

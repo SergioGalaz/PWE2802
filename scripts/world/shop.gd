@@ -6,7 +6,7 @@ func _init() -> void:
 	prompt = "Comprar y vender"
 	size = Vector2(160, 150)
 	sprite_name = "almacen"
-	sprite_scale = 5.0
+	sprite_scale = 2.5
 	fill = Color(0.55, 0.3, 0.25)
 
 
