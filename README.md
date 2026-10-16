@@ -54,7 +54,7 @@ La prueba automática juega los tres días a velocidad alta y revisa la pesca, e
 godot --headless --path . --fixed-fps 60 -- --smoke
 ```
 
-Los personajes y entes miden 64 píxeles, con luz y sombra suave, y tienen tres vistas (frente, espalda y lado). Se dibujan en `tools/figuras.py` con formas simples a cuatro veces su tamaño que luego se reducen. Los suelos y edificios usan una paleta de 30 colores definida en `tools/arte.py`.
+Los personajes y entes miden 64 píxeles, con luz y sombra suave, y tienen tres vistas (frente, espalda y lado) con cuadros de paso y de ataque. Al morir se caen y se apagan. Se dibujan en `tools/figuras.py` con formas simples a cuatro veces su tamaño que luego se reducen. Los suelos y edificios usan una paleta de 30 colores definida en `tools/arte.py`.
 
 Para sacar capturas (necesita pantalla, o `xvfb-run` en Linux):
 
@@ -86,3 +86,4 @@ Escribe en `assets/sprites` y `assets/audio`. Godot los importa con filtro de p�
 - `tools/generate_assets.py`: genera los sprites y los sonidos.
 - `tools/arte.py`: la paleta, los suelos y los edificios.
 - `tools/figuras.py`: personajes, entes, íconos de recursos y adornos.
+- `tools/edificios.py`: casas, iglesia, estaciones y árboles en tres cuartos.

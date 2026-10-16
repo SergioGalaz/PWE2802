@@ -7,7 +7,7 @@ Al final se reduce al tamaño real, cada píxel se lleva al color más cercano d
 rampas y se agrega un contorno oscuro del color de cada borde.
 
 Los personajes miden 64 píxeles de alto y tienen tres vistas (frente, espalda y
-lado) con dos cuadros cada una: quieto y paso. El lado mira a la derecha; el juego
+lado) con tres cuadros cada una: quieto, paso y ataque. El lado mira a la derecha; el juego
 lo voltea para la izquierda.
 """
 import math
@@ -59,6 +59,15 @@ RAMPAS = {
     "magia": ["#0e2a3a", "#1c5a7a", "#3aa0c8", "#9ce8f4"],
     "bote_rojo": ["#3a1210", "#7a2620", "#b23e30", "#d8664c"],
     "cielo": ["#1d2a3a", "#24476a", "#3f7896", "#8fc0c8"],
+    "muro_blanco": ["#77736c", "#a49f95", "#cdc7bb", "#ebe6da"],
+    "muro_azul": ["#1d3245", "#2d4f67", "#44718f", "#6c99b3"],
+    "muro_ocre": ["#5c4318", "#8d6a2a", "#bf9844", "#dfbf70"],
+    "muro_rojo": ["#481a16", "#7a2c24", "#a6443a", "#ca6a58"],
+    "zinc": ["#2b2f35", "#484e57", "#6c747e", "#98a0aa"],
+    "alerce": ["#382a1e", "#5c4532", "#84674b", "#a6896a"],
+    "humo": ["#58585e", "#7e7e86", "#a6a6ae", "#cecfd4"],
+    "morado": ["#24162e", "#3e2850", "#5e4078", "#8462a2"],
+    "hoja": ["#14261a", "#24432a", "#3a6636", "#5f8c48"],
 }
 _PALETA = np.array(sorted({
     tuple(int(h[i:i + 2], 16) for i in (1, 3, 5)) for r in RAMPAS.values() for h in r
@@ -162,6 +171,18 @@ class Figura:
         """Un píxel exacto, para ojos, botones y otros detalles chicos."""
         self.puntos.append((int(x), int(y), _RAMPAS_RGB[rampa][tono] if rampa != "tinta" else _hex("#0e0d12")))
 
+    def pix(self, x, y, rampa, tono=0, solo_encima=False):
+        """Un píxel pintado en su capa: lo que se dibuje después lo tapa.
+
+        Con `solo_encima`, solo pinta donde ya hay algo dibujado (para texturas).
+        """
+        x, y = int(x), int(y)
+        if 0 <= x < self.w and 0 <= y < self.h:
+            if solo_encima and not self.alfa[y * SS + SS // 2, x * SS + SS // 2]:
+                return
+            self.rgb[y * SS:(y + 1) * SS, x * SS:(x + 1) * SS] = _RAMPAS_RGB[rampa][tono]
+            self.alfa[y * SS:(y + 1) * SS, x * SS:(x + 1) * SS] = True
+
     def brillo(self, rampa, intensidad=1):
         """Un halo de color alrededor de la figura (la rezadora, el Revisorio)."""
         self.brillos.append((rampa, intensidad))
@@ -253,6 +274,7 @@ class Humano:
 
 def humano(h, vista, cuadro):
     f = Figura(ANCHO, ALTO, h.semilla)
+    _HOMBROS[0] = h.hombros
     if vista == "lado":
         _humano_lado(h, f, cuadro)
     else:
@@ -281,12 +303,12 @@ def _humano_frente(h, f, vista, cuadro):
         f.poligono(h.abrigo, [(cx - sh + 0.5, 34), (cx + sh - 0.5, 34), (cx + sh + 0.5, largo), (cx - sh - 0.5, largo)],
                    textura=0.06)
     h.extra("torso", f, vista, cuadro)
-    # Brazos: en el paso se mecen un poco.
-    mece = 1.2 if paso else 0.0
-    f.capsula(h.brazos, cx - sh - 0.6, 23.5, cx - sh - 1.4, 37 - mece, 2.5, textura=0.05)
-    f.capsula(h.brazos, cx + sh + 0.6, 23.5, cx + sh + 1.4, 37 + mece, 2.5, textura=0.05)
-    f.elipse(h.piel, cx - sh - 1.4, 38.8 - mece, 2.2, 2.2)
-    f.elipse(h.piel, cx + sh + 1.4, 38.8 + mece, 2.2, 2.2)
+    # Brazos: en el paso se mecen un poco; al atacar, la mano derecha sube.
+    for lado, hombro_x in (("izq", cx - sh - 0.6), ("der", cx + sh + 0.6)):
+        mano = _mano(vista, cuadro, lado if vista == "frente" else ("der" if lado == "izq" else "izq"))
+        f.capsula(h.brazos, hombro_x, 23.5, mano[0], mano[1] - 1.6 if mano[1] > 23.5 else mano[1] + 1.6, 2.5,
+                  textura=0.05)
+        f.elipse(h.piel, mano[0], mano[1], 2.2, 2.2)
     h.extra("manos", f, vista, cuadro)
     # Cuello y cabeza.
     f.poligono(h.piel, [(cx - 2, 17), (cx + 2, 17), (cx + 2.2, 21.5), (cx - 2.2, 21.5)], tono=-1)
@@ -303,13 +325,13 @@ def _humano_frente(h, f, vista, cuadro):
 
 
 def _humano_lado(h, f, cuadro):
-    paso = cuadro == 1
+    paso = cuadro >= 1
     hy = 13
     h.extra("atras", f, "lado", cuadro)
     # Brazo del fondo, más oscuro.
-    lejos = (27.5, 35.5) if paso else (24.0, 37.0)
-    f.capsula(h.brazos, 24, 23.5, lejos[0], lejos[1], 2.3, tono=-1)
-    f.elipse(h.piel, lejos[0], lejos[1] + 1.4, 2.0, 2.0, tono=-1)
+    lejos = _mano("lado", cuadro, "lejos")
+    f.capsula(h.brazos, 24, 23.5, lejos[0], lejos[1] - 1.4, 2.3, tono=-1)
+    f.elipse(h.piel, lejos[0], lejos[1], 2.0, 2.0, tono=-1)
     if not h.falda:
         atras = (20.5, 56.5) if paso else (23.0, 57.0)
         adelante = (28.5, 56.5) if paso else (25.5, 57.0)
@@ -321,9 +343,9 @@ def _humano_lado(h, f, cuadro):
     if h.abrigo:
         f.poligono(h.abrigo, [(19.5, 34), (28.5, 34), (29.5, h.abrigo_largo), (18.5, h.abrigo_largo)], textura=0.06)
     h.extra("torso", f, "lado", cuadro)
-    cerca = (21.0, 36.0) if paso else (25.5, 37.0)
-    f.capsula(h.brazos, 24.5, 23.5, cerca[0], cerca[1], 2.4, textura=0.05)
-    f.elipse(h.piel, cerca[0], cerca[1] + 1.5, 2.1, 2.1)
+    cerca = _mano("lado", cuadro, "cerca")
+    f.capsula(h.brazos, 24.5, 23.5, cerca[0], cerca[1] - 1.5 if cuadro < 2 else cerca[1], 2.4, textura=0.05)
+    f.elipse(h.piel, cerca[0], cerca[1], 2.1, 2.1)
     h.extra("manos", f, "lado", cuadro)
     f.poligono(h.piel, [(22, 17), (26, 17), (26.5, 21.5), (21.5, 21.5)], tono=-1)
     rx, ry = h.cabeza
@@ -343,17 +365,25 @@ def _ojos(f, vista, ojo="tinta", y=13, separacion=2.5, cx=24, brillo=None):
         f.punto(27, y, ojo, 0)
 
 
+_HOMBROS = [8.5]
+
+
 def _mano(vista, cuadro, lado):
-    """Dónde queda una mano: 'izq' o 'der' en frente/espalda, 'cerca'/'lejos' de lado."""
+    """Dónde queda una mano: 'izq' o 'der' (del personaje) en frente y espalda, 'cerca' o
+    'lejos' de lado. Cuadro 0 es quieto, 1 es el paso y 2 es el ataque."""
     paso = cuadro == 1
-    mece = 1.2 if paso else 0.0
+    ataque = cuadro == 2
     if vista == "lado":
         if lado == "cerca":
-            return (21.0, 37.5) if paso else (25.5, 38.5)
-        return (27.5, 36.9) if paso else (24.0, 38.4)
-    if lado == "izq":
-        return (24 - 8.5 - 1.4, 38.8 - mece) if vista == "frente" else (24 + 8.5 + 1.4, 38.8 + mece)
-    return (24 + 8.5 + 1.4, 38.8 + mece) if vista == "frente" else (24 - 8.5 - 1.4, 38.8 - mece)
+            return (34.0, 27.0) if ataque else ((21.0, 37.5) if paso else (25.5, 38.5))
+        return (21.5, 36.5) if ataque else ((27.5, 36.9) if paso else (24.0, 38.4))
+    sh = _HOMBROS[0]
+    mece = 1.2 if paso else 0.0
+    # En la espalda, la derecha del personaje queda a la izquierda de quien mira.
+    a_la_derecha = (lado == "der") == (vista == "frente")
+    if ataque and lado == "der":
+        return (24 + sh + 2.5, 13.0) if a_la_derecha else (24 - sh - 2.5, 13.0)
+    return (24 + sh + 1.4, 38.8 + mece) if a_la_derecha else (24 - sh - 1.4, 38.8 - mece)
 
 
 # --- Abdón Cárcamo ---
@@ -411,23 +441,29 @@ def _arpon(f, x1, y1, x2, y2):
 
 
 def _abdon_manos(f, vista, cuadro):
-    if vista == "frente":
+    ataque = cuadro == 2
+    if vista in ("frente", "espalda"):
         x, y = _mano(vista, cuadro, "izq")
         _farol(f, x, y)
         x, y = _mano(vista, cuadro, "der")
-        _arpon(f, x - 6, y - 8, x + 6, y + 8)
-    elif vista == "espalda":
-        x, y = _mano(vista, cuadro, "izq")
+        if ataque:
+            _arpon(f, x, y + 12, x, y - 6)  # el arpón en alto, listo para clavar
+        elif vista == "frente":
+            _arpon(f, x - 6, y - 8, x + 6, y + 8)
+        else:
+            _arpon(f, x + 6, y - 8, x - 6, y + 8)
+    elif ataque:
+        x, y = _mano(vista, cuadro, "lejos")
         _farol(f, x, y)
-        x, y = _mano(vista, cuadro, "der")
-        _arpon(f, x + 6, y - 8, x - 6, y + 8)
+        x, y = _mano(vista, cuadro, "cerca")
+        _arpon(f, x - 17, y + 1.5, x + 4, y - 0.5)
     else:
         x, y = _mano(vista, cuadro, "cerca")
         _farol(f, x, y)
 
 
 def _abdon_atras(f, vista, cuadro):
-    if vista == "lado":
+    if vista == "lado" and cuadro < 2:
         _arpon(f, 15, 22, 33, 44)
 
 
@@ -537,6 +573,11 @@ def _martillo(f, vista, cuadro):
         x, y = _mano(vista, cuadro, "izq")
     else:
         x, y = _mano(vista, cuadro, "cerca")
+    if cuadro == 2:
+        # El martillo arriba, a punto de caer.
+        f.linea("madera", [(x, y + 1), (x + 1, y - 8)], 1.2)
+        f.poligono("metal", [(x - 2, y - 11), (x + 4, y - 11), (x + 4, y - 8), (x - 2, y - 8)])
+        return
     f.linea("madera", [(x, y - 1), (x, y + 8)], 1.2)
     f.poligono("metal", [(x - 2.8, y + 7), (x + 2.8, y + 7), (x + 2.8, y + 10), (x - 2.8, y + 10)])
 
@@ -715,6 +756,7 @@ def trauco(vista, cuadro):
     """Bajo, encorvado, cubierto de musgo, con su hacha de piedra."""
     f = Figura(ANCHO, ALTO, 9)
     paso = cuadro == 1
+    ataque = cuadro == 2
     if vista == "lado":
         f.capsula("trauco", 26, 40, 34 if paso else 29, 46, 2.8, tono=-1)  # brazo del fondo
         f.capsula("trauco", 23, 46, 19 if paso else 21, 58, 3.6, tono=-1, textura=0.075)
@@ -729,7 +771,7 @@ def trauco(vista, cuadro):
         f.poligono("musgo", [(28, 33), (36, 34), (33, 39), (29, 38)], textura=0.2)
         f.punto(34, 30, "ojo", 3)
         f.poligono("trauco", [(27, 26), (24, 24.5), (27.5, 29)], tono=-1)  # oreja
-        mano = (22, 50) if paso else (27, 50)
+        mano = (33, 34) if ataque else ((22, 50) if paso else (27, 50))
         f.capsula("trauco", 28, 34, mano[0], mano[1], 3.0, textura=0.075)
         f.linea("madera", [(mano[0], mano[1] + 2), (mano[0] + 9, mano[1] - 12)], 1.6)
         f.poligono("piedra", [(mano[0] + 7, mano[1] - 17), (mano[0] + 13, mano[1] - 13),
@@ -761,8 +803,8 @@ def trauco(vista, cuadro):
         f.elipse("trauco", 24, 29, 6.5, 6.0, tono=-1)
         f.elipse("musgo", 24, 30, 6.0, 4.0, textura=0.2)
     f.capsula("trauco", 15, 32, 11 + (0 if paso else 1), 50 - sube, 3.0, textura=0.075)
-    f.capsula("trauco", 33, 32, 37, 49 + sube, 3.0, textura=0.075)
-    hx, hy = 37, 50 + sube
+    hx, hy = (38, 30) if ataque else (37, 50 + sube)
+    f.capsula("trauco", 33, 32, hx, hy - 1, 3.0, textura=0.075)
     f.linea("madera", [(hx - 1, hy + 3), (hx + 3, hy - 14)], 1.6)
     f.poligono("piedra", [(hx - 1, hy - 18), (hx + 7, hy - 16), (hx + 6, hy - 10), (hx + 0.5, hy - 12)], textura=0.15)
     f.elipse("trauco", hx, hy, 2.9, 2.7)
@@ -774,6 +816,7 @@ def fiura(vista, cuadro):
     """Mujer pequeña de cara horrible, pelo negro hasta la cintura y vestido rojo."""
     f = Figura(ANCHO, ALTO, 10)
     paso = cuadro == 1
+    ataque = cuadro == 2
     cx = 24 if vista != "lado" else 24.5
     hy = 24
     f.poligono("pelo_negro", [(cx - 7, hy - 4), (cx + 7, hy - 4), (cx + 8.5, hy + 22), (cx - 8.5, hy + 22)], textura=0.075)
@@ -786,10 +829,13 @@ def fiura(vista, cuadro):
     f.poligono("rojo", [(cx - 6, hy + 7), (cx + 6, hy + 7), (cx + 9, 53), (cx - 9, 53)], textura=0.075)
     for x in range(int(cx - 8), int(cx + 9), 3):
         f.poligono("rojo", [(x, 52.5), (x + 2.5, 52.5), (x + 1.2, 55)], tono=-1)
-    mano_y = 40 + (1.5 if paso else 0)
-    f.capsula("fiura", cx - 6, hy + 9, cx - 9.5, mano_y, 1.8)
-    f.capsula("fiura", cx + 6, hy + 9, cx + 9.5, 40 + (0 if paso else 1.5), 1.8)
-    for sx, my in ((-9.5, mano_y), (9.5, 40 + (0 if paso else 1.5))):
+    # Al atacar levanta las garras.
+    mano_y = 27 if ataque else 40 + (1.5 if paso else 0)
+    otra_y = 27 if ataque else 40 + (0 if paso else 1.5)
+    abre = 12 if ataque else 9.5
+    f.capsula("fiura", cx - 6, hy + 9, cx - abre, mano_y, 1.8)
+    f.capsula("fiura", cx + 6, hy + 9, cx + abre, otra_y, 1.8)
+    for sx, my in ((-abre, mano_y), (abre, otra_y)):
         for d in (-1.2, 0, 1.2):
             f.linea("blanco", [(cx + sx + d, my + 1.2), (cx + sx + d * 1.5, my + 3.6)], 0.4, tono=1)
     f.elipse("fiura", cx, hy, 5.5, 6.0)
@@ -817,6 +863,8 @@ def invunche(vista, cuadro):
     """Guardián de la cueva: anda en tres patas, con una pierna torcida sobre la espalda."""
     f = Figura(56, 48, 11)
     paso = cuadro == 1
+    ataque = cuadro == 2
+    adelante = 3 if ataque else 0
     f.elipse("invunche", 26, 28, 14, 8, textura=0.1)
     f.capsula("invunche", 18, 25, 26, 13, 3.0, textura=0.075, tono=-1)  # la pierna torcida
     f.elipse("invunche", 27, 11, 3.4, 2.6, tono=-1)
@@ -828,22 +876,29 @@ def invunche(vista, cuadro):
     f.elipse("invunche", 27 + (1.5 if paso else 0), 44.5, 3.8, 2.0)
     for x in (19, 23, 27, 31):
         f.linea("invunche", [(x, 23), (x + 1.5, 30)], 0.5, tono=-2)
-    f.elipse("invunche", 44, 27, 6.5, 6.0)
-    f.poligono("pelo_negro", [(38.5, 24), (42, 20.5), (48, 21), (50, 25), (46, 23)], textura=0.2)
-    f.punto(43, 26, "ojo", 3)
-    f.punto(47, 26, "ojo", 3)
-    f.punto(43, 27, "rojo", 0)
-    f.punto(47, 27, "rojo", 0)
-    f.linea("pelo_negro", [(42, 30.5), (48, 30.5)], 0.9)
-    for x in (43, 45, 47):
-        f.punto(x, 31, "blanco", 2)
+    hx = 44 + adelante
+    f.elipse("invunche", hx, 27, 6.5, 6.0)
+    f.poligono("pelo_negro", [(hx - 5.5, 24), (hx - 2, 20.5), (hx + 4, 21), (hx + 6, 25), (hx + 2, 23)], textura=0.2)
+    f.punto(hx - 1, 26, "ojo", 3)
+    f.punto(hx + 3, 26, "ojo", 3)
+    f.punto(hx - 1, 27, "rojo", 0)
+    f.punto(hx + 3, 27, "rojo", 0)
+    if ataque:
+        f.elipse("traje", hx + 1, 31, 3.0, 2.0, plano=True, tono=0)
+        for x in (hx - 1, hx + 1, hx + 3):
+            f.punto(x, 30, "blanco", 3)
+    else:
+        f.linea("pelo_negro", [(hx - 2, 30.5), (hx + 4, 30.5)], 0.9)
+        for x in (hx - 1, hx + 1, hx + 3):
+            f.punto(x, 31, "blanco", 2)
     return f.imagen()
 
 
 def chonchon(vista, cuadro):
     """La cabeza del brujo que vuela de noche con las orejas hechas alas."""
     f = Figura(48, 48, 12)
-    aleteo = -3.0 if cuadro else 0.0
+    aleteo = -3.0 if cuadro == 1 else (2.0 if cuadro == 2 else 0.0)
+    ataque = cuadro == 2
     for lado in (-1, 1):
         base_x = 24 + lado * 6
         for i, rampa in enumerate(["pluma_naranja", "pluma_azul", "pluma_naranja", "pluma_azul", "pluma_naranja"]):
@@ -857,10 +912,16 @@ def chonchon(vista, cuadro):
     f.poligono("pluma_azul", [(19, 14), (22, 4), (24, 13)], textura=0.1)
     f.poligono("pluma_naranja", [(24, 13), (27, 5), (29, 14)], textura=0.1)
     for x in (20.5, 27.5):
-        f.elipse("ojo", x, 21.5, 2.4, 2.4, plano=True)
+        f.elipse("rojo" if ataque else "ojo", x, 21.5, 2.4, 2.4, plano=True, tono=3)
         f.punto(x - 0.5, 21, "tinta")
     f.elipse("piel_palida", 24, 25, 1.6, 2.0, tono=-1)
-    f.linea("rojo", [(21, 28.5), (24, 29.5), (27, 28.5)], 0.8, tono=-1)
+    if ataque:
+        # Abre la boca para el grito: ¡tue, tue!
+        f.elipse("traje", 24, 29, 3.2, 2.4, plano=True, tono=0)
+        f.punto(23, 28, "blanco", 3)
+        f.punto(25, 28, "blanco", 3)
+    else:
+        f.linea("rojo", [(21, 28.5), (24, 29.5), (27, 28.5)], 0.8, tono=-1)
     f.poligono("pelo_gris", [(19, 30), (29, 30), (26, 34), (24, 36), (22, 34)], textura=0.2, tono=-1)
     return f.imagen()
 
@@ -1075,17 +1136,18 @@ ESCENARIO = {"bote": bote, "pilote": pilote, "cuerpo": cuerpo}
 def todo():
     """Todos los sprites de este módulo: nombre de archivo → imagen."""
     out = {}
+    cuadros = {"": 0, "_paso": 1, "_ataque": 2}
     for nombre, receta in PERSONAJES.items():
         for vista in VISTAS:
-            out[f"{nombre}_{vista}"] = humano(receta, vista, 0)
-            out[f"{nombre}_{vista}_paso"] = humano(receta, vista, 1)
+            for sufijo, cuadro in cuadros.items():
+                out[f"{nombre}_{vista}{sufijo}"] = humano(receta, vista, cuadro)
     for nombre, fn in ENTES.items():
         for vista in VISTAS:
-            out[f"{nombre}_{vista}"] = fn(vista, 0)
-            out[f"{nombre}_{vista}_paso"] = fn(vista, 1)
+            for sufijo, cuadro in cuadros.items():
+                out[f"{nombre}_{vista}{sufijo}"] = fn(vista, cuadro)
     for nombre, fn in SUBJEFES.items():
-        out[f"{nombre}_frente"] = fn("frente", 0)
-        out[f"{nombre}_frente_paso"] = fn("frente", 1)
+        for sufijo, cuadro in cuadros.items():
+            out[f"{nombre}_frente{sufijo}"] = fn("frente", cuadro)
     for nombre, fn in {**ITEMS, **ESCENARIO}.items():
         out[nombre] = fn()
     return out

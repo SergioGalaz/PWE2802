@@ -34,6 +34,7 @@ var work_spots := {
 var night_timer := 0.0
 var waves_sent := 0
 var hunt_spawned := 0
+var boss_spawned := false
 var shade: CanvasModulate
 var trees: Array = []
 
@@ -139,11 +140,29 @@ func _physics_process(delta: float) -> void:
 		if waves_sent < 3 and night_timer >= waves_sent * WAVE_INTERVAL:
 			_send_wave(4 + 2 * waves_sent)
 			waves_sent += 1
+		# Con la última ola sale el Invunche, el guardián de la cueva de los brujos.
+		if not boss_spawned and waves_sent == 3:
+			boss_spawned = true
+			spawn_enemy("invunche", Vector2(2950, 1650), true)
+			GameState.say("Algo grande sale de la cueva del acantilado. ¡Es el Invunche!")
+			GameState.story("jefe_invunche", [
+				["Don Fermín", "¡Patrón! Ese es el Invunche, el que cuida la cueva de los brujos."],
+				["Don Fermín", "Camina en tres patas y embiste derecho. Hágase a un lado cuando agache la cabeza."],
+			])
 	elif hunt_spawned < MAX_HUNT and night_timer >= hunt_spawned * HUNT_INTERVAL:
 		var enemies: Array = get_tree().get_nodes_in_group("enemies")
 		if enemies.size() < 5:
 			spawn_enemy("trauco" if randf() < 0.55 else "fiura", _forest_point(), false)
 		hunt_spawned += 1
+	# Desde la segunda noche, a medianoche baja el Chonchón.
+	if not GameState.is_horde_night() and GameState.day >= 2 and not boss_spawned and night_timer >= 90.0:
+		boss_spawned = true
+		spawn_enemy("chonchon", _forest_point(), false)
+		GameState.say("¡Tue, tue! Se oye un pájaro que no es pájaro.")
+		GameState.story("jefe_chonchon", [
+			["Don Fermín", "Eso es un Chonchón: la cabeza de un brujo que vuela con las orejas."],
+			["Don Fermín", "Su grito paraliza a la cuadrilla. Péguele rápido, que de lejos no se deja."],
+		])
 
 
 func _send_wave(count: int) -> void:
@@ -283,6 +302,7 @@ func _on_phase_changed(phase: int) -> void:
 		night_timer = 0.0
 		waves_sent = 0
 		hunt_spawned = 0
+		boss_spawned = false
 		for f in finaos():
 			f.order = FinaoScript.Order.FOLLOW
 		if GameState.is_horde_night():
@@ -338,6 +358,10 @@ func enemy_killed(e, source: Node) -> void:
 		var n := 1
 		if source != null and source.get("role") == "saqueador":
 			n += 1
+		if e.get("jefe"):
+			n += 4
+			GameState.change_meter("marea", -5.0)
+			GameState.say("¡Cayó el %s! Te llevas cinco trofeos y la Marea baja un poco." % e.display_name)
 		GameState.add("trofeo", n)
 		GameState.story("primer_trofeo", [
 			["Don Fermín", "Eso es un trofeo. Lucio los compra y no pregunta. El gringo del hotel pagaría más, pero ese es otro cuento."],
@@ -355,7 +379,7 @@ func enemy_reached_church(e: Unit) -> void:
 func finao_fell(f: Unit) -> void:
 	GameState.say("A %s se le cayó la cabeza en la pelea. El cuerpo quedó tirado." % f.display_name)
 	_drop_body(f.global_position)
-	f.queue_free()
+	f.fall()
 
 
 func player_down() -> void:
@@ -464,15 +488,15 @@ func _draw() -> void:
 	_tile("camino", Rect2(2224, 1100, 52, 300))
 	# El palafito de Abdón: piso de tablas sobre pilotes.
 	for x in range(680, 1260, 80):
-		_sprite("pilote", Vector2(x, 1392), 2.0)
+		_sprite("pilote", Vector2(x, 1392), 1.5)
 	# El Santa Rosita, amarrado junto al muelle; se mece con el agua.
-	_sprite("bote", Vector2(1200, 1650 + water_frame * 3), 2.0)
+	_sprite("bote", Vector2(1200, 1650 + water_frame * 3), 1.5)
 	_tile("tablas", Rect2(648, 976, 624, 336))
 	draw_rect(Rect2(648, 976, 624, 336), Color(0.12, 0.08, 0.06), false, 4.0)
 	draw_rect(Rect2(780, 1212, 184, 76), Color(0, 0, 0, 0.25))
 	# Quicaví: casas de tejuelas y la iglesia de madera.
 	for h in HOUSES:
-		_sprite(h[0], h[1], 2.5)
-	_sprite("iglesia", church_pos + Vector2(0, 110))
+		_sprite(h[0], h[1], 1.5)
+	_sprite("iglesia", church_pos + Vector2(0, 110), 1.5)
 	for i in trees.size():
-		_sprite("arbol_%d" % (i % 2), trees[i] + Vector2(0, 50))
+		_sprite("arbol_%d" % (i % 2), trees[i] + Vector2(0, 50), 1.5)

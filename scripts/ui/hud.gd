@@ -17,6 +17,10 @@ var auto_skip := false
 
 var root: Control
 var top_label: Label
+## Barra de vida del subjefe que esté en pie.
+var boss_box: VBoxContainer
+var boss_label: Label
+var boss_bar: ProgressBar
 ## Íconos y cantidades de cada recurso en la barra de arriba.
 var res_labels := {}
 var hp_bar: ProgressBar
@@ -50,6 +54,7 @@ func _ready() -> void:
 	root.theme = make_theme()
 	add_child(root)
 	_build_top_bar()
+	_build_boss_bar()
 	_build_prompt_and_notes()
 	touch = TouchControls.new()
 	add_child(touch)
@@ -156,6 +161,31 @@ func _build_top_bar() -> void:
 		res_labels[res] = label
 
 
+func _build_boss_bar() -> void:
+	boss_box = VBoxContainer.new()
+	boss_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	boss_box.offset_left = -360
+	boss_box.offset_right = 360
+	boss_box.offset_top = -250
+	boss_box.offset_bottom = -180
+	boss_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boss_box.visible = false
+	root.add_child(boss_box)
+	boss_label = Label.new()
+	boss_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	boss_label.add_theme_font_size_override("font_size", 28)
+	boss_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	boss_label.add_theme_constant_override("outline_size", 8)
+	boss_box.add_child(boss_label)
+	boss_bar = ProgressBar.new()
+	boss_bar.custom_minimum_size = Vector2(720, 18)
+	boss_bar.show_percentage = false
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color(0.7, 0.2, 0.25)
+	boss_bar.add_theme_stylebox_override("fill", fill)
+	boss_box.add_child(boss_bar)
+
+
 func _small_bar(parent: Control, text: String, c: Color) -> ProgressBar:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 0)
@@ -221,6 +251,12 @@ func _process(_delta: float) -> void:
 		" · Noche de Marea Bruja" if GameState.is_horde_night() else "",
 	]
 	hp_bar.value = p.hp
+	var bosses: Array = get_tree().get_nodes_in_group("jefes")
+	boss_box.visible = not bosses.is_empty()
+	if boss_box.visible:
+		boss_label.text = bosses[0].display_name
+		boss_bar.max_value = bosses[0].max_hp
+		boss_bar.value = bosses[0].hp
 	energy_bar.value = p.energy
 	meter_bars["marea"].value = GameState.marea
 	meter_bars["cerro"].value = GameState.cerro

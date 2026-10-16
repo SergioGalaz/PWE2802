@@ -27,12 +27,19 @@ const VIEWS := ["frente", "espalda", "lado"]
 var sprite_name := ""
 var frames: Array[Texture2D] = []
 var views := {}
+var attack_views := {}
 var view := "frente"
+## Tiempo que queda mostrando el cuadro de ataque, y hacia dónde.
+var attack_pose := 0.0
+var attack_dir := Vector2.ZERO
 var sprite_scale := 1.5
 var face_left := false
 var walk_time := 0.0
 ## Hacia dónde mira; si queda en cero se usa la velocidad.
 var look := Vector2.ZERO
+## Altura a la que flota sobre su sombra (el Chonchón).
+var float_height := 0.0
+var float_time := 0.0
 
 static var _texture_cache := {}
 
@@ -62,6 +69,9 @@ func setup_body(layer: int, mask: int) -> void:
 					pair.append(tex)
 			if not pair.is_empty():
 				views[v] = pair
+			var atk := texture("%s_%s_ataque" % [sprite_name, v])
+			if atk != null:
+				attack_views[v] = atk
 		if views.has("frente"):
 			frames = views["frente"]
 	label = Label.new()
@@ -89,7 +99,31 @@ func take_damage(amount: float, source: Node = null) -> void:
 
 
 func _on_death(_source: Node) -> void:
-	queue_free()
+	fall()
+
+
+## Muestra el cuadro de ataque un momento, mirando hacia `dir` si se da.
+func show_attack(dir := Vector2.ZERO) -> void:
+	attack_pose = 0.22
+	attack_dir = dir
+
+
+## La caída al morir: se ladea, se apaga y desaparece. Deja de contar para todo
+## (grupos y choques) desde el primer momento.
+func fall() -> void:
+	dead = true
+	for g in get_groups():
+		if not str(g).begins_with("_"):
+			remove_from_group(g)
+	collision_layer = 0
+	collision_mask = 0
+	if label != null:
+		label.visible = false
+	var side := -1.0 if face_left else 1.0
+	var tween := create_tween()
+	tween.tween_property(self, "rotation", side * PI / 2.0, 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(self, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(queue_free)
 
 
 func stun(seconds: float) -> void:
@@ -103,7 +137,11 @@ func heal(amount: float) -> void:
 func tick_status(delta: float) -> void:
 	flash = maxf(0.0, flash - delta)
 	stun_time = maxf(0.0, stun_time - delta)
+	attack_pose = maxf(0.0, attack_pose - delta)
+	float_time += delta
 	var dir := look if look.length() > 0.1 else velocity
+	if attack_pose > 0.0 and attack_dir.length() > 0.1:
+		dir = attack_dir
 	if dir.length() > 5.0 or look.length() > 0.1:
 		if absf(dir.y) > absf(dir.x) * 1.15:
 			view = "espalda" if dir.y < 0.0 else "frente"
@@ -131,8 +169,13 @@ func _draw() -> void:
 		draw_circle(Vector2.ZERO, radius * 1.1, Color(0, 0, 0, 0.3))
 		var step := int(walk_time * 7.0) % 2
 		var tex: Texture2D = frames[mini(step, frames.size() - 1)]
+		if attack_pose > 0.0 and attack_views.has(view):
+			tex = attack_views[view]
+			step = 0
 		var h := tex.get_height() * sprite_scale
 		var bob := -sprite_scale if step == 1 else 0.0
+		if float_height > 0.0:
+			bob = -float_height + sin(float_time * 4.0) * 4.0
 		var flip := face_left and view == "lado"
 		draw_set_transform(Vector2(0, radius - h + bob), 0.0, Vector2(-sprite_scale if flip else sprite_scale, sprite_scale))
 		var tint := Color(2.5, 2.5, 2.5) if flash > 0.0 else Color.WHITE

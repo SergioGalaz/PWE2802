@@ -156,6 +156,7 @@ func _physics_process(delta: float) -> void:
 
 func _attack(stats: Dictionary) -> void:
 	attack_cd = stats["cd"]
+	show_attack(target.global_position - global_position)
 	var dmg: float = stats["dmg"]
 	if role == "arponero":
 		world.spawn_shot(global_position, target.global_position)

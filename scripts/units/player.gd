@@ -115,6 +115,7 @@ func attack() -> void:
 		return
 	attack_cd = 0.4
 	swing = 0.18
+	show_attack()
 	Audio.play("arpon")
 	use_energy(0.5)
 	var enemies: Array = get_tree().get_nodes_in_group("enemies")

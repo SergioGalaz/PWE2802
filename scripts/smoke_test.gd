@@ -16,6 +16,7 @@ var did_barricades := false
 var night_positioned := -1
 var saw_enemy := false
 var saw_horde := false
+var saw_bosses := {}
 var kills := 0
 
 
@@ -92,6 +93,9 @@ func _process(_delta: float) -> void:
 		var enemies: Array = get_tree().get_nodes_in_group("enemies")
 		if not enemies.is_empty():
 			saw_enemy = true
+			for en in enemies:
+				if en.get("jefe"):
+					saw_bosses[en.type] = true
 			if GameState.is_horde_night():
 				saw_horde = true
 			# El jugador ataca solo al ente más cercano, para probar el combate.
@@ -140,6 +144,8 @@ func _finish() -> void:
 	check("la demo llega al final del día 3", GameState.demo_done)
 	check("aparecieron entes de noche", saw_enemy)
 	check("hubo horda en la tercera noche", saw_horde)
+	check("apareció el Chonchón", saw_bosses.has("chonchon"))
+	check("apareció el Invunche", saw_bosses.has("invunche"))
 	print("SMOKE resumen: día %d, finaos %d, recursos %s, marea %d, cerro %d, juicio %d, quicaví %d, frames %d" % [
 		GameState.day, main.world.finaos().size(), GameState.resources, int(GameState.marea),
 		int(GameState.cerro), int(GameState.juicio), int(GameState.village_hp), frames,

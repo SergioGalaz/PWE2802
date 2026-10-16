@@ -12,7 +12,7 @@ var title := ""
 var title_label: Label
 ## Sprite pixel art. Si no hay, se dibuja un rectángulo del color `fill`.
 var sprite_name := ""
-var sprite_scale := 2.0
+var sprite_scale := 1.5
 
 
 func _ready() -> void:

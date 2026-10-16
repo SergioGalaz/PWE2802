@@ -1,6 +1,6 @@
 extends Node
 ## Saca capturas de la demo para revisar cómo se ve. Se corre con:
-##   godot --path . -- --screenshot=res://captura.png [--night] [--touch]
+##   godot --path . -- --screenshot=res://captura.png [--night] [--touch] [--jefes]
 
 var main: Node
 var path := "user://captura.png"
@@ -40,6 +40,9 @@ func _ready() -> void:
 			w.spawn_enemy("ahogado", Vector2(2000 + i * 90, 1560 + (i % 2) * 60), true)
 		for f in w.finaos():
 			f.global_position = Vector2(2150 + randf_range(-80, 80), 1330)
+		if "--jefes" in OS.get_cmdline_user_args():
+			w.spawn_enemy("invunche", Vector2(2420, 1480), true)
+			w.spawn_enemy("chonchon", Vector2(2080, 1180), false)
 	else:
 		w.player.global_position = Vector2(960, 1150)
 		GameState.phase_time = 200.0
