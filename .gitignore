@@ -1,8 +1,8 @@
 # Godot
 .godot/
-*.import
 export.cfg
 export_credentials.cfg
 *.apk
 *.aab
 build/
+__pycache__/

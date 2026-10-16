@@ -1,0 +1,72 @@
+name: Prueba de la demo
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Descargar Godot 4.3
+        run: |
+          curl -sSL -o godot.zip https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.3-stable_linux.x86_64 godot
+      - name: Importar el proyecto
+        run: ./godot --headless --path . --import
+      - name: Jugar los tres días en modo automático
+        run: |
+          ./godot --headless --path . --fixed-fps 60 -- --smoke 2>&1 | tee smoke.log
+          grep -q "SMOKE TODO OK" smoke.log
+          ! grep -E "SCRIPT ERROR|Parse Error" smoke.log
+
+  apk:
+    needs: smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Descargar Godot 4.3 y sus plantillas de exportación
+        run: |
+          curl -sSL -o godot.zip https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.3-stable_linux.x86_64 godot
+          curl -sSL -o templates.tpz https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates/4.3.stable
+          unzip -q templates.tpz -d plantillas
+          mv plantillas/templates/* ~/.local/share/godot/export_templates/4.3.stable/
+      - name: Configurar el SDK de Android y la firma de depuración
+        run: |
+          keytool -genkeypair -keystore "$RUNNER_TEMP/debug.keystore" -storepass android \
+            -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+          mkdir -p ~/.config/godot
+          for f in editor_settings-4.3.tres editor_settings-4.tres; do
+            cat > ~/.config/godot/$f <<CONF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_SDK_ROOT"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/debug_keystore = "$RUNNER_TEMP/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          CONF
+          done
+      - name: Importar el proyecto
+        run: ./godot --headless --path . --import
+      - name: Exportar el APK
+        run: |
+          mkdir -p build
+          ./godot --headless --path . --export-debug "Android" build/marea-bruja.apk
+          test -s build/marea-bruja.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: marea-bruja-apk
+          path: build/marea-bruja.apk
