@@ -35,7 +35,11 @@ La interfaz cambia sola entre táctil y mando según lo último que se usó.
 1. Instala [Godot 4.3](https://godotengine.org/download/archive/4.3-stable/).
 2. Abre `project.godot` desde el gestor de proyectos y pulsa F5.
 
-## Cómo exportarlo a una tablet Android
+## Instalar en la tablet sin Godot
+
+GitHub Actions arma un APK de depuración en cada cambio. En la pestaña **Actions** del repositorio, abre la última ejecución de **Prueba de la demo**, baja hasta **Artifacts** y descarga `marea-bruja-apk`. Descomprime el zip, copia el APK a la tablet y ábrelo. Android va a pedir permiso para instalar apps de origen desconocido.
+
+## Cómo exportarlo a una tablet Android desde Godot
 
 1. En Godot, ve a **Editor > Administrar plantillas de exportación** y descarga las de 4.3.
 2. En **Editor > Configuración del editor > Exportar > Android**, configura el SDK de Android y un keystore de depuración (Godot puede crearlo solo).
