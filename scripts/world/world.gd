@@ -464,7 +464,9 @@ func _draw() -> void:
 	_tile("camino", Rect2(2224, 1100, 52, 300))
 	# El palafito de Abdón: piso de tablas sobre pilotes.
 	for x in range(680, 1260, 80):
-		draw_rect(Rect2(x - 5, 1300, 10, 80), Color(0.25, 0.18, 0.12))
+		_sprite("pilote", Vector2(x, 1392), 2.0)
+	# El Santa Rosita, amarrado junto al muelle; se mece con el agua.
+	_sprite("bote", Vector2(1200, 1650 + water_frame * 3), 2.0)
 	_tile("tablas", Rect2(648, 976, 624, 336))
 	draw_rect(Rect2(648, 976, 624, 336), Color(0.12, 0.08, 0.06), false, 4.0)
 	draw_rect(Rect2(780, 1212, 184, 76), Color(0, 0, 0, 0.25))

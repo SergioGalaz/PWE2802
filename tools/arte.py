@@ -1,6 +1,7 @@
-"""Pixel art de Marea Bruja: personajes a 32 píxeles y una paleta chilota de 30 colores.
+"""Pixel art de Marea Bruja: suelos y edificios con una paleta chilota de 30 colores.
 
-Todos los sprites usan solo los colores de PALETA. Al guardar, cada píxel se lleva al
+Los personajes, entes e íconos están en tools/figuras.py. Los suelos y edificios usan
+solo los colores de PALETA. Al guardar, cada píxel se lleva al
 color más cercano de la paleta, así nada se escapa aunque un dibujo mezcle tonos.
 Lo usa tools/generate_assets.py.
 """
@@ -9,6 +10,8 @@ import random
 from pathlib import Path
 
 from PIL import Image
+
+import figuras
 
 ROOT = Path(__file__).resolve().parent.parent
 SPRITES = ROOT / "assets" / "sprites"
@@ -132,199 +135,6 @@ def tramado(x, y, nivel):
     """Tramado ordenado 2x2 para pasar de un tono a otro sin mezclar colores."""
     umbral = ((0, 2), (3, 1))[y % 2][x % 2] / 4.0 + 0.125
     return nivel > umbral
-
-
-# --- Personajes (32x32, con los pies en la última fila) ---
-
-def figura(filas, alto=32, ancho=32):
-    for f in filas:
-        assert len(f) <= ancho, f"fila de {len(f)}: {f}"
-    filas = [f.ljust(ancho, ".") for f in filas]
-    while filas and set(filas[-1]) == {"."}:
-        filas.pop()
-    filas = ["." * ancho] * (alto - len(filas)) + filas
-    lz = Lienzo(ancho, alto)
-    lz.ascii(filas)
-    return lz.img
-
-
-ABDON_CUERPO = [
-    "...............kk",
-    "..............kffk",
-    "..............kffk",
-    "............kkkrrkkk",
-    "..........kkrrorrrrrkk",
-    ".........krroorrrrrrrRk",
-    ".........krorrrrrrrrRRk",
-    "........kRRRRRRRRRRRRRRk",
-    "........kpRpRpRpRpRpRpRk",
-    "........kssssssssssssSSk",
-    "........kskkssssssskkSSk",
-    "........ksskksssssskkSSk",
-    "........kssssssSssssSSSk",
-    "........kSllssssssssllSk",
-    ".........klllsrrrrslllk",
-    "..........kkllllllllkk",
-    "........kkWWwwwwwwwwWWkk",
-    ".......kWWwwvwwwwwwvwwwvk",
-    "......kWwwrwwvwwwwvwwrwwvk",
-    "......kwwwrwwvwwwwvwwrwwvk",
-    "......kssvrwwvwwwwvwwrvssk",
-    "......kSSkrrrrrrrrrrrrkSSk",
-    "......kkkkRkRkRkRkRkRkRkkk",
-    ".........kbbbbbbbbbbbbk",
-]
-ABDON = ABDON_CUERPO + [
-    ".........kbbbbbBkkbbbbBk",
-    ".........kbbbbBkkbbbbBk",
-    ".........kBbbbBkkBbbbBk",
-    ".........kccccckkccccck",
-    "........kcccccckkcccccck",
-    "........kkkkkkkkkkkkkkkk",
-]
-ABDON_PASO = ABDON_CUERPO + [
-    ".........kbbbbbBkkbbbbBk",
-    "........kbbbbBk..kbbbBk",
-    "........kBbbbBk..kBbbBk",
-    ".......kccccck...kcccck",
-    ".......kcccccck..kccccck",
-    ".......kkkkkkkk..kkkkkkk",
-]
-
-FINAO_CUERPO = [
-    "............kkkkkkkk",
-    "..........kkNnzzzzzzkk",
-    ".........knNzzzzzzzzZZk",
-    ".........knzzzzzzzzzZZk",
-    ".........kzzkpkzzzkpkZk",
-    ".........kzzzkzzzzzkZZk",
-    ".........kZzzzzZzzzzZZk",
-    ".........kZzkpkpkpkzZZk",
-    "..........kZZkkkkkkZZk",
-    "...........kkZZZZZZkk",
-    "........kkgggllgggggggkk",
-    ".......kgggglggggggllgllk",
-    "......kzgglgNnggggglggllzk",
-    "......kzglggnNggggglgllzZk",
-    "......kzZlgggnggggglgllkZk",
-    "......kzZkggglgnggggllllkzk",
-    "......kZZklgglgnNgglllkZZk",
-    ".......kkklgglgggggllllkk",
-    "..........klglkglgkllk",
-    "..........kllllllllllk",
-    "..........klllllkllllk",
-    "..........kZlllkkllllk",
-]
-FINAO = FINAO_CUERPO + [
-    "..........kZZlk..kZllk",
-    "..........kzZZk..kzZZk",
-    ".........kzzZZk..kzzZZk",
-    ".........kkkkkk..kkkkkk",
-]
-FINAO_PASO = FINAO_CUERPO + [
-    ".........kZZlk...kZllk",
-    ".........kzZZk....kzZk",
-    "........kzzZZk....kzZZk",
-    "........kkkkkk....kkkkk",
-]
-
-TRAUCO_CUERPO = [
-    "...............kk",
-    ".............kkYYkk",
-    "...........kkYYyYYYkk",
-    ".........kkYyYYYYyYYYkk",
-    ".......kkYYYyYYYYYYyYYYkk",
-    ".....kkA" + "Y" * 16 + "Akk",
-    "......kkkkkkkkkkkkkkkkkkkk",
-    "..........kSSSSSSSSSSk",
-    "..........kSrrSSSSrrSk",
-    "..........kSSSSwSSSSSk",
-    "..........kSSkkkkkkSSk",
-    "...........kSwwwwwwSk",
-    "............kkwwwwkk",
-    ".........kkYYYYYYYYYYkk",
-    "........kSYyYYyYYyYYyYSk",
-    "........kSYYYYYYYYYYYYSk",
-    "........kSkAYyYYyYYyAkSk",
-    "........kkkAYYYYYYYYAkkk",
-    "..........kAAAAAAAAAAk",
-    "..........kAkAkAkAkAkk",
-]
-TRAUCO = TRAUCO_CUERPO + [
-    "...........kwwwk..kwwk",
-    "...........kwwvk..kwvk",
-    "...........kkkkk..kkkk",
-]
-TRAUCO_PASO = TRAUCO_CUERPO + [
-    "..........kwwwk...kwwk",
-    "..........kwwvk....kwvk",
-    "..........kkkkk....kkkk",
-]
-
-FIURA_CUERPO = [
-    "............kkkkkkkk",
-    "..........kkcccccccckk",
-    ".........kccclcccclccck",
-    "........kcccNNNNNNNNccck",
-    "........kccNrkNNNNkrNcck",
-    "........kccNNNNnNNNNNcck",
-    "........kccNNkkkkkkNNcck",
-    "........kccNkpkkkpkNNcck",
-    "........kcccNNNNNNNNccck",
-    ".......kccckkRRRRRRkkccck",
-    "......kccckrRRrrRRRRrkccck",
-    "......kcckNrrRrrrrRrrNkcck",
-    "......kcckNkrrrrrrrrkNkcck",
-    "......kcckNkrRrrrrRrkNkcck",
-    "......kckNNkrrrrrrrrkNNkck",
-    "......kckpkkRrrrrrrRkkpkck",
-    ".......kk.kRRrrrrrrRRk.kk",
-    "..........kRrrrrrrrRk",
-    ".........kRRrrrrrrrrRRk",
-    "........kRRrRrrrrrrRrRRk",
-    "........kRkRkRkRkRkRkRkk",
-]
-FIURA = FIURA_CUERPO + [
-    "...........kNNk..kNNk",
-    "..........kkkkk..kkkkk",
-]
-FIURA_PASO = FIURA_CUERPO + [
-    "..........kNNk....kNNk",
-    ".........kkkkk....kkkkk",
-]
-
-
-def recolor(filas, mapa):
-    return ["".join(mapa.get(c, c) for c in f) for f in filas]
-
-
-## El ahogado de Cai Cai es un Finao que el mar no soltó: azul, con ojos rojos.
-AHOGADO_MAPA = {"z": "u", "Z": "b", "p": "r", "g": "l", "l": "c"}
-
-
-def con_baston(img):
-    """El pahueldún del Trauco, un bastón de madera torcida en la mano derecha."""
-    lz = Lienzo(img.width, img.height)
-    lz.img.paste(img)
-    lz.px = lz.img.load()
-    for y in range(8, 31):
-        x = 26 if y > 14 else 25
-        lz.p(x, y, "w" if y % 4 else "v")
-    lz.rect(24, 6, 3, 3, "w")
-    lz.p(24, 6, "W")
-    lz.p(25, 20, "S")
-    lz.p(24, 20, "S")
-    return lz.contorno().img
-
-
-CUERPO = [
-    "......kkkk",
-    ".....kzzzZk.kkkkkkkkkkkkkkkk",
-    "....kzpzpzZkgggglggggglgglggk",
-    "....kzzzzzZkgglgggnNggglgggllkk",
-    ".....kZZZZkkllllllllllllkzZkzZk",
-    "......kkkk..kkkkkkkkkkkkkkkkkkk",
-]
 
 
 # --- Suelos (32x32, se repiten sin costuras) ---
@@ -756,17 +566,10 @@ def muestra_paleta(ruta):
 
 
 def make_sprites():
-    personajes = [
-        ("abdon", ABDON, ABDON_PASO), ("finao", FINAO, FINAO_PASO),
-        ("fiura", FIURA, FIURA_PASO),
-        ("ahogado", recolor(FINAO, AHOGADO_MAPA), recolor(FINAO_PASO, AHOGADO_MAPA)),
-    ]
-    for nombre, quieto, paso in personajes:
-        guardar(figura(quieto), nombre)
-        guardar(figura(paso), nombre + "_paso")
-    guardar(con_baston(figura(TRAUCO)), "trauco")
-    guardar(con_baston(figura(TRAUCO_PASO)), "trauco_paso")
-    guardar(figura(CUERPO, alto=6), "cuerpo")
+    # Personajes, entes, ítems y adornos: tienen su propio dibujante con luz suave.
+    for nombre, img in figuras.todo().items():
+        SPRITES.mkdir(parents=True, exist_ok=True)
+        img.save(SPRITES / f"{nombre}.png")
     guardar(pasto(), "pasto")
     guardar(monte(), "monte")
     guardar(arena(), "arena")

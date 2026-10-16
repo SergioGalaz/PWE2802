@@ -10,7 +10,7 @@ const SPELL_RADIUS := 170.0
 const SPELL_DAMAGE := 45.0
 
 var energy := 100.0
-var facing := Vector2.RIGHT
+var facing := Vector2.DOWN
 var attack_cd := 0.0
 var dash_time := 0.0
 var dash_cd := 0.0
@@ -77,8 +77,7 @@ func _physics_process(delta: float) -> void:
 	if aim.length() > 0.35 and not GameState.ui_blocking:
 		facing = aim.normalized()
 	move_and_slide()
-	if absf(facing.x) > 0.2:
-		face_left = facing.x < 0.0
+	look = facing
 	_update_nearest()
 	if accepts_input:
 		if Input.is_action_just_pressed("attack"):

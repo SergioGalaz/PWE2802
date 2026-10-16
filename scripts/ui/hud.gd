@@ -17,7 +17,8 @@ var auto_skip := false
 
 var root: Control
 var top_label: Label
-var res_label: Label
+## Íconos y cantidades de cada recurso en la barra de arriba.
+var res_labels := {}
 var hp_bar: ProgressBar
 var energy_bar: ProgressBar
 var meter_bars := {}
@@ -128,11 +129,31 @@ func _build_top_bar() -> void:
 	meter_bars["cerro"] = _small_bar(meters, "Cerro", Color(0.45, 0.7, 0.35))
 	meter_bars["juicio"] = _small_bar(meters, "Juicio", Color(0.75, 0.6, 0.9))
 	meter_bars["aldea"] = _small_bar(meters, "Quicaví", Color(0.85, 0.7, 0.45))
-	res_label = Label.new()
-	res_label.add_theme_font_size_override("font_size", 24)
-	res_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-	res_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(res_label)
+	var resources := HFlowContainer.new()
+	resources.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	resources.add_theme_constant_override("h_separation", 18)
+	resources.add_theme_constant_override("v_separation", 2)
+	row.add_child(resources)
+	for res in GameState.RESOURCE_NAMES.keys() + ["finaos"]:
+		var item := HBoxContainer.new()
+		item.add_theme_constant_override("separation", 4)
+		item.tooltip_text = GameState.RESOURCE_NAMES.get(res, "Finaos")
+		resources.add_child(item)
+		var tex := Unit.texture("item_%s" % res) if res != "finaos" else Unit.texture("finao_muralla_frente")
+		if tex != null:
+			var icon := TextureRect.new()
+			icon.texture = tex
+			icon.custom_minimum_size = Vector2(40, 40)
+			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			item.add_child(icon)
+		var label := Label.new()
+		label.add_theme_font_size_override("font_size", 24)
+		label.text = "0"
+		if tex == null:
+			label.text = item.tooltip_text
+		item.add_child(label)
+		res_labels[res] = label
 
 
 func _small_bar(parent: Control, text: String, c: Color) -> ProgressBar:
@@ -205,11 +226,9 @@ func _process(_delta: float) -> void:
 	meter_bars["cerro"].value = GameState.cerro
 	meter_bars["juicio"].value = GameState.juicio
 	meter_bars["aldea"].value = GameState.village_hp
-	var parts: PackedStringArray = []
 	for res in GameState.RESOURCE_NAMES:
-		parts.append("%s %d" % [GameState.RESOURCE_NAMES[res], GameState.amount(res)])
-	parts.append("Finaos %d" % world.finaos().size())
-	res_label.text = "  ".join(parts)
+		res_labels[res].text = str(GameState.amount(res))
+	res_labels["finaos"].text = str(world.finaos().size())
 	if p.nearest != null and modal == null and not dialogue_panel.visible:
 		var g := InputSetup.glyph("interact")
 		var key := "Acción" if InputSetup.mode == InputSetup.Mode.TOUCH else g

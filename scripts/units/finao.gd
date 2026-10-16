@@ -46,7 +46,7 @@ func _ready() -> void:
 	hp = minf(hp, max_hp) if hp > 0.0 else max_hp
 	color = stats["color"]
 	radius = 20.0
-	sprite_name = "finao"
+	sprite_name = "finao_%s" % role
 	setup_body(LAYER_FINAO, LAYER_TERRAIN)
 	add_to_group("finaos")
 	add_to_group("interactables")

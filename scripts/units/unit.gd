@@ -21,12 +21,18 @@ var flash := 0.0
 var dead := false
 var world: Node
 var label: Label
-## Sprite pixel art de 32 píxeles (dos cuadros: quieto y paso). Si no hay, se dibuja un círculo.
+## Sprite pixel art en tres vistas (frente, espalda y lado), con dos cuadros cada una:
+## quieto y paso. El lado mira a la derecha y se voltea. Si no hay sprite, se dibuja un círculo.
+const VIEWS := ["frente", "espalda", "lado"]
 var sprite_name := ""
 var frames: Array[Texture2D] = []
-var sprite_scale := 2.0
+var views := {}
+var view := "frente"
+var sprite_scale := 1.5
 var face_left := false
 var walk_time := 0.0
+## Hacia dónde mira; si queda en cero se usa la velocidad.
+var look := Vector2.ZERO
 
 static var _texture_cache := {}
 
@@ -48,10 +54,16 @@ func setup_body(layer: int, mask: int) -> void:
 	shape.shape = circle
 	add_child(shape)
 	if sprite_name != "":
-		for n in [sprite_name, sprite_name + "_paso"]:
-			var tex := texture(n)
-			if tex != null:
-				frames.append(tex)
+		for v in VIEWS:
+			var pair: Array[Texture2D] = []
+			for n in ["%s_%s" % [sprite_name, v], "%s_%s_paso" % [sprite_name, v]]:
+				var tex := texture(n)
+				if tex != null:
+					pair.append(tex)
+			if not pair.is_empty():
+				views[v] = pair
+		if views.has("frente"):
+			frames = views["frente"]
 	label = Label.new()
 	label.text = display_name
 	label.size = Vector2(240, 30)
@@ -91,8 +103,17 @@ func heal(amount: float) -> void:
 func tick_status(delta: float) -> void:
 	flash = maxf(0.0, flash - delta)
 	stun_time = maxf(0.0, stun_time - delta)
-	if absf(velocity.x) > 5.0:
-		face_left = velocity.x < 0.0
+	var dir := look if look.length() > 0.1 else velocity
+	if dir.length() > 5.0 or look.length() > 0.1:
+		if absf(dir.y) > absf(dir.x) * 1.15:
+			view = "espalda" if dir.y < 0.0 else "frente"
+		else:
+			view = "lado"
+			face_left = dir.x < 0.0
+		if views.has(view):
+			frames = views[view]
+		elif views.has("frente"):
+			frames = views["frente"]
 	walk_time = walk_time + delta if velocity.length() > 10.0 else 0.0
 	queue_redraw()
 
@@ -112,7 +133,8 @@ func _draw() -> void:
 		var tex: Texture2D = frames[mini(step, frames.size() - 1)]
 		var h := tex.get_height() * sprite_scale
 		var bob := -sprite_scale if step == 1 else 0.0
-		draw_set_transform(Vector2(0, radius - h + bob), 0.0, Vector2(-sprite_scale if face_left else sprite_scale, sprite_scale))
+		var flip := face_left and view == "lado"
+		draw_set_transform(Vector2(0, radius - h + bob), 0.0, Vector2(-sprite_scale if flip else sprite_scale, sprite_scale))
 		var tint := Color(2.5, 2.5, 2.5) if flash > 0.0 else Color.WHITE
 		draw_texture(tex, Vector2(-tex.get_width() / 2.0, 0.0), tint)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
