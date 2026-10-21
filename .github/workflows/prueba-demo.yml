@@ -17,8 +17,8 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - name: Instalar LuaJIT, xvfb y OpenGL
-        run: sudo apt-get update && sudo apt-get install -y luajit xvfb libglu1-mesa
+      - name: Instalar LuaJIT, xvfb, OpenGL y OpenAL
+        run: sudo apt-get update && sudo apt-get install -y luajit xvfb libglu1-mesa libopenal1
       - name: Jugar los tres días con LuaJIT
         run: luajit tools/prueba.lua
       - name: Descargar Defold (bob.jar)
