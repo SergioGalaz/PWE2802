@@ -1,0 +1,11 @@
+font: "/assets/fuentes/DejaVuSans-Bold.ttf"
+material: "/builtins/fonts/font.material"
+size: 24
+antialias: 1
+alpha: 1.0
+outline_alpha: 1.0
+outline_width: 3.0
+shadow_alpha: 0.0
+shadow_blur: 0
+output_format: TYPE_BITMAP
+extra_characters: "áéíóúñÁÉÍÓÚÑ¡¿üÜ·✕□○△…"
