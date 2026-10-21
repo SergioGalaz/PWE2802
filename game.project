@@ -1,0 +1,61 @@
+[project]
+title = Marea Bruja
+version = 0.2.0
+custom_resources = 
+
+[bootstrap]
+main_collection = /main/main.collectionc
+render = /render/juego.renderc
+
+[display]
+width = 1920
+height = 1200
+high_dpi = 1
+dynamic_orientation = 0
+fullscreen = 0
+update_frequency = 60
+vsync = 1
+
+[input]
+game_binding = /input/juego.input_bindingc
+gamepads = /builtins/input/default.gamepadsc
+
+[graphics]
+default_texture_min_filter = nearest
+default_texture_mag_filter = nearest
+
+[script]
+shared_state = 1
+
+[sprite]
+max_count = 2048
+
+[label]
+max_count = 512
+
+[gui]
+max_count = 8
+
+[collection]
+max_instances = 4096
+
+[factory]
+max_count = 16
+
+[sound]
+max_sound_instances = 32
+
+[android]
+package = cl.mareabruja.juego
+version_code = 2
+app_icon_36x36 = /assets/icono/icono_36.png
+app_icon_48x48 = /assets/icono/icono_48.png
+app_icon_72x72 = /assets/icono/icono_72.png
+app_icon_96x96 = /assets/icono/icono_96.png
+app_icon_144x144 = /assets/icono/icono_144.png
+app_icon_192x192 = /assets/icono/icono_192.png
+
+[prueba]
+automatica = 0
+captura = 
+ventana = 

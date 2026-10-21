@@ -1,0 +1,27 @@
+images {
+  image: "/assets/ui/anillo.png"
+}
+images {
+  image: "/assets/ui/arco.png"
+}
+images {
+  image: "/assets/ui/blanco.png"
+}
+images {
+  image: "/assets/ui/borde.png"
+}
+images {
+  image: "/assets/ui/circulo.png"
+}
+images {
+  image: "/assets/ui/flecha.png"
+}
+images {
+  image: "/assets/ui/linterna.png"
+}
+images {
+  image: "/assets/ui/redondo.png"
+}
+margin: 0
+extrude_borders: 2
+inner_padding: 0

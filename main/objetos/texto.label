@@ -1,0 +1,20 @@
+size {
+  x: 600.0
+  y: 40.0
+}
+color {
+  x: 1.0
+  y: 1.0
+  z: 1.0
+  w: 1.0
+}
+outline {
+  x: 0.0
+  y: 0.0
+  z: 0.0
+  w: 1.0
+}
+text: ""
+font: "/main/fuentes/chica.font"
+material: "/builtins/fonts/label.material"
+pivot: PIVOT_CENTER

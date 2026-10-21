@@ -1,0 +1,372 @@
+images {
+  image: "/assets/sprites/abdon_espalda.png"
+}
+images {
+  image: "/assets/sprites/abdon_espalda_ataque.png"
+}
+images {
+  image: "/assets/sprites/abdon_espalda_paso.png"
+}
+images {
+  image: "/assets/sprites/abdon_frente.png"
+}
+images {
+  image: "/assets/sprites/abdon_frente_ataque.png"
+}
+images {
+  image: "/assets/sprites/abdon_frente_paso.png"
+}
+images {
+  image: "/assets/sprites/abdon_lado.png"
+}
+images {
+  image: "/assets/sprites/abdon_lado_ataque.png"
+}
+images {
+  image: "/assets/sprites/abdon_lado_paso.png"
+}
+images {
+  image: "/assets/sprites/ahogado_espalda.png"
+}
+images {
+  image: "/assets/sprites/ahogado_espalda_ataque.png"
+}
+images {
+  image: "/assets/sprites/ahogado_espalda_paso.png"
+}
+images {
+  image: "/assets/sprites/ahogado_frente.png"
+}
+images {
+  image: "/assets/sprites/ahogado_frente_ataque.png"
+}
+images {
+  image: "/assets/sprites/ahogado_frente_paso.png"
+}
+images {
+  image: "/assets/sprites/ahogado_lado.png"
+}
+images {
+  image: "/assets/sprites/ahogado_lado_ataque.png"
+}
+images {
+  image: "/assets/sprites/ahogado_lado_paso.png"
+}
+images {
+  image: "/assets/sprites/ahumadero.png"
+}
+images {
+  image: "/assets/sprites/almacen.png"
+}
+images {
+  image: "/assets/sprites/arbol_0.png"
+}
+images {
+  image: "/assets/sprites/arbol_1.png"
+}
+images {
+  image: "/assets/sprites/arena.png"
+}
+images {
+  image: "/assets/sprites/barricada.png"
+}
+images {
+  image: "/assets/sprites/bote.png"
+}
+images {
+  image: "/assets/sprites/cama.png"
+}
+images {
+  image: "/assets/sprites/camino.png"
+}
+images {
+  image: "/assets/sprites/casa_0.png"
+}
+images {
+  image: "/assets/sprites/casa_1.png"
+}
+images {
+  image: "/assets/sprites/casa_2.png"
+}
+images {
+  image: "/assets/sprites/chonchon_frente.png"
+}
+images {
+  image: "/assets/sprites/chonchon_frente_ataque.png"
+}
+images {
+  image: "/assets/sprites/chonchon_frente_paso.png"
+}
+images {
+  image: "/assets/sprites/cuerpo.png"
+}
+images {
+  image: "/assets/sprites/finao_arponero_espalda.png"
+}
+images {
+  image: "/assets/sprites/finao_arponero_espalda_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_arponero_espalda_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_arponero_frente.png"
+}
+images {
+  image: "/assets/sprites/finao_arponero_frente_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_arponero_frente_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_arponero_lado.png"
+}
+images {
+  image: "/assets/sprites/finao_arponero_lado_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_arponero_lado_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_contador_espalda.png"
+}
+images {
+  image: "/assets/sprites/finao_contador_espalda_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_contador_espalda_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_contador_frente.png"
+}
+images {
+  image: "/assets/sprites/finao_contador_frente_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_contador_frente_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_contador_lado.png"
+}
+images {
+  image: "/assets/sprites/finao_contador_lado_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_contador_lado_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_muralla_espalda.png"
+}
+images {
+  image: "/assets/sprites/finao_muralla_espalda_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_muralla_espalda_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_muralla_frente.png"
+}
+images {
+  image: "/assets/sprites/finao_muralla_frente_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_muralla_frente_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_muralla_lado.png"
+}
+images {
+  image: "/assets/sprites/finao_muralla_lado_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_muralla_lado_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_rezador_espalda.png"
+}
+images {
+  image: "/assets/sprites/finao_rezador_espalda_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_rezador_espalda_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_rezador_frente.png"
+}
+images {
+  image: "/assets/sprites/finao_rezador_frente_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_rezador_frente_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_rezador_lado.png"
+}
+images {
+  image: "/assets/sprites/finao_rezador_lado_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_rezador_lado_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_saqueador_espalda.png"
+}
+images {
+  image: "/assets/sprites/finao_saqueador_espalda_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_saqueador_espalda_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_saqueador_frente.png"
+}
+images {
+  image: "/assets/sprites/finao_saqueador_frente_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_saqueador_frente_paso.png"
+}
+images {
+  image: "/assets/sprites/finao_saqueador_lado.png"
+}
+images {
+  image: "/assets/sprites/finao_saqueador_lado_ataque.png"
+}
+images {
+  image: "/assets/sprites/finao_saqueador_lado_paso.png"
+}
+images {
+  image: "/assets/sprites/fiura_espalda.png"
+}
+images {
+  image: "/assets/sprites/fiura_espalda_ataque.png"
+}
+images {
+  image: "/assets/sprites/fiura_espalda_paso.png"
+}
+images {
+  image: "/assets/sprites/fiura_frente.png"
+}
+images {
+  image: "/assets/sprites/fiura_frente_ataque.png"
+}
+images {
+  image: "/assets/sprites/fiura_frente_paso.png"
+}
+images {
+  image: "/assets/sprites/fiura_lado.png"
+}
+images {
+  image: "/assets/sprites/fiura_lado_ataque.png"
+}
+images {
+  image: "/assets/sprites/fiura_lado_paso.png"
+}
+images {
+  image: "/assets/sprites/iglesia.png"
+}
+images {
+  image: "/assets/sprites/invunche_frente.png"
+}
+images {
+  image: "/assets/sprites/invunche_frente_ataque.png"
+}
+images {
+  image: "/assets/sprites/invunche_frente_paso.png"
+}
+images {
+  image: "/assets/sprites/item_arpon.png"
+}
+images {
+  image: "/assets/sprites/item_brea.png"
+}
+images {
+  image: "/assets/sprites/item_chicha.png"
+}
+images {
+  image: "/assets/sprites/item_cochayuyo.png"
+}
+images {
+  image: "/assets/sprites/item_cuerpo.png"
+}
+images {
+  image: "/assets/sprites/item_madera.png"
+}
+images {
+  image: "/assets/sprites/item_papas.png"
+}
+images {
+  image: "/assets/sprites/item_pescado.png"
+}
+images {
+  image: "/assets/sprites/item_pescado_ahumado.png"
+}
+images {
+  image: "/assets/sprites/item_pesos.png"
+}
+images {
+  image: "/assets/sprites/item_revisorio.png"
+}
+images {
+  image: "/assets/sprites/item_sal.png"
+}
+images {
+  image: "/assets/sprites/item_trofeo.png"
+}
+images {
+  image: "/assets/sprites/lena.png"
+}
+images {
+  image: "/assets/sprites/mar_0.png"
+}
+images {
+  image: "/assets/sprites/mar_1.png"
+}
+images {
+  image: "/assets/sprites/mesa_brujeria.png"
+}
+images {
+  image: "/assets/sprites/monte.png"
+}
+images {
+  image: "/assets/sprites/pasto.png"
+}
+images {
+  image: "/assets/sprites/pilote.png"
+}
+images {
+  image: "/assets/sprites/tablas.png"
+}
+images {
+  image: "/assets/sprites/tablas_v.png"
+}
+images {
+  image: "/assets/sprites/trauco_espalda.png"
+}
+images {
+  image: "/assets/sprites/trauco_espalda_ataque.png"
+}
+images {
+  image: "/assets/sprites/trauco_espalda_paso.png"
+}
+images {
+  image: "/assets/sprites/trauco_frente.png"
+}
+images {
+  image: "/assets/sprites/trauco_frente_ataque.png"
+}
+images {
+  image: "/assets/sprites/trauco_frente_paso.png"
+}
+images {
+  image: "/assets/sprites/trauco_lado.png"
+}
+images {
+  image: "/assets/sprites/trauco_lado_ataque.png"
+}
+images {
+  image: "/assets/sprites/trauco_lado_paso.png"
+}
+margin: 0
+extrude_borders: 2
+inner_padding: 0

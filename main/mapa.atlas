@@ -1,0 +1,18 @@
+images {
+  image: "/assets/mapa/suelo.png"
+}
+images {
+  image: "/assets/mapa/mar_0.png"
+}
+images {
+  image: "/assets/mapa/mar_1.png"
+}
+images {
+  image: "/assets/mapa/piso.png"
+}
+images {
+  image: "/assets/mapa/muelle.png"
+}
+margin: 0
+extrude_borders: 2
+inner_padding: 0

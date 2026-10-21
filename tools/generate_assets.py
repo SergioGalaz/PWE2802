@@ -5,13 +5,15 @@ Todo sale de este script, así se puede ajustar y volver a generar:
 
     python3 tools/generate_assets.py
 
-Necesita Pillow y NumPy. Escribe en assets/sprites y assets/audio.
-El dibujo de los sprites y la paleta están en tools/arte.py.
+Necesita Pillow y NumPy. Escribe en assets/sprites y assets/audio, y con tools/defold.py
+hornea el mapa, la interfaz y los atlas. El dibujo de los sprites y la paleta están en
+tools/arte.py.
 """
 import wave
 
 import numpy as np
 
+import defold
 from arte import ROOT, SPRITES, make_sprites
 
 AUDIO = ROOT / "assets" / "audio"
@@ -186,6 +188,7 @@ def make_music():
 
 if __name__ == "__main__":
     make_sprites()
+    defold.preparar()
     make_sfx()
     make_music()
     print("Listo:", len(list(SPRITES.glob("*.png"))), "sprites y", len(list(AUDIO.glob("*.wav"))), "sonidos.")

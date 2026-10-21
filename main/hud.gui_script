@@ -1,0 +1,1030 @@
+-- Interfaz de la partida: pantalla de inicio, barra superior, avisos, diálogos, menús,
+-- rueda de órdenes, luz de la noche y controles táctiles. Todo se puede usar con
+-- mando (cruceta o stick y A), teclado o tocando la pantalla.
+-- Recibe toda la entrada y la deja en juego/entrada.lua para el resto del juego.
+local estado = require "juego.estado"
+local entrada = require "juego.entrada"
+local mundo = require "juego.mundo"
+local finao = require "juego.finao"
+local tienda = require "juego.tienda"
+local pesca = require "juego.pesca"
+local vista = require "juego.vista"
+
+local REF_W, REF_H = 1920, 1200
+
+local BLANCO = vmath.vector4(1, 1, 1, 1)
+local NEGRO = vmath.vector4(0, 0, 0, 1)
+local INVISIBLE = vmath.vector4(1, 1, 1, 0)
+local COLOR_PANEL = vmath.vector4(0.08, 0.1, 0.14, 0.92)
+local COLOR_BORDE = vmath.vector4(0.55, 0.45, 0.3, 1)
+local BOTON = vmath.vector4(0.22, 0.2, 0.18, 1)
+local BOTON_FOCO = vmath.vector4(0.45, 0.35, 0.2, 1)
+local BOTON_BORDE = vmath.vector4(1, 0.85, 0.5, 1)
+local BOTON_APAGADO = vmath.vector4(0.15, 0.15, 0.15, 1)
+local FONDO_BARRA = vmath.vector4(0.16, 0.16, 0.19, 1)
+
+local ACCIONES = {}
+for _, n in ipairs({"move_left", "move_right", "move_up", "move_down", "aim_left", "aim_right", "aim_up", "aim_down",
+		"interact", "attack", "dodge", "spell", "squad_wheel", "menu"}) do
+	ACCIONES[hash(n)] = n
+end
+local H_TOQUE = hash("touch")
+local H_CLIC = hash("clic")
+local H_MANDO = hash("mando_conectado")
+
+-- Botones táctiles: desplazamiento desde la esquina de abajo a la derecha (el menú va arriba).
+local RADIO_JOY = 130
+local RADIO_BOTON = 78
+local BOTONES_TACTILES = {
+	{accion = "interact", texto = "Acción", x = -150, y = 150, color = {0.3, 0.7, 0.4}},
+	{accion = "attack", texto = "Arpón", x = -330, y = 110, color = {0.75, 0.35, 0.3}},
+	{accion = "dodge", texto = "Esquivar", x = -150, y = 330, color = {0.35, 0.5, 0.8}},
+	{accion = "spell", texto = "Revisorio", x = -330, y = 290, color = {0.6, 0.35, 0.75}},
+	{accion = "squad_wheel", texto = "Cuadrilla", x = -500, y = 130, color = {0.6, 0.55, 0.35}},
+	{accion = "menu", texto = "Menú", x = -110, y = -210, color = {0.4, 0.4, 0.45}, arriba = true},
+}
+-- Rueda de órdenes: arriba, derecha, abajo, izquierda.
+local RUEDA = {
+	{orden = finao.SEGUIR, texto = "Seguir", x = 0, y = 170},
+	{orden = finao.ATACAR, texto = "Atacar", x = 220, y = 0},
+	{orden = finao.DEFENDER, texto = "Defender aquí", x = 0, y = -170},
+	{orden = finao.RETIRARSE, texto = "Retirarse", x = -220, y = 0},
+}
+
+local function v3(x, y)
+	return vmath.vector3(x, y, 0)
+end
+
+local function v4(c, a)
+	return vmath.vector4(c[1], c[2], c[3], a or c[4] or 1)
+end
+
+-- --- Piezas ---
+
+-- Un nodo vacío para agrupar y anclar.
+local function grupo(padre, x, y, capa)
+	local n = gui.new_box_node(v3(x, y), v3(1, 1))
+	gui.set_color(n, INVISIBLE)
+	if padre then
+		gui.set_parent(n, padre)
+	end
+	if capa then
+		gui.set_layer(n, capa)
+	end
+	return n
+end
+
+local function caja(padre, x, y, w, h, color, imagen, pivote)
+	local n = gui.new_box_node(v3(x, y), v3(w, h))
+	gui.set_inherit_alpha(n, false)
+	gui.set_pivot(n, pivote or gui.PIVOT_NW)
+	gui.set_color(n, color or BLANCO)
+	if imagen then
+		gui.set_texture(n, "ui")
+		gui.play_flipbook(n, imagen)
+		if imagen == "redondo" or imagen == "borde" then
+			gui.set_slice9(n, vmath.vector4(14, 14, 14, 14))
+		end
+	end
+	if padre then
+		gui.set_parent(n, padre)
+	end
+	return n
+end
+
+local function texto(padre, x, y, s, fuente, color, pivote, ancho)
+	local n = gui.new_text_node(v3(x, y), s)
+	gui.set_inherit_alpha(n, false)
+	gui.set_font(n, fuente or "normal")
+	gui.set_color(n, color or BLANCO)
+	gui.set_outline(n, NEGRO)
+	gui.set_shadow(n, vmath.vector4(0, 0, 0, 0))
+	gui.set_pivot(n, pivote or gui.PIVOT_NW)
+	if ancho then
+		gui.set_line_break(n, true)
+		gui.set_size(n, v3(ancho, 40))
+	end
+	if padre then
+		gui.set_parent(n, padre)
+	end
+	return n
+end
+
+local function alto_texto(n)
+	return gui.get_text_metrics_from_node(n).height
+end
+
+-- Panel redondeado con borde, con la esquina de arriba a la izquierda en (x, y).
+local function panel(padre, x, y, w, h)
+	local n = caja(padre, x, y, w, h, COLOR_PANEL, "redondo")
+	caja(n, 0, 0, w, h, COLOR_BORDE, "borde")
+	return n
+end
+
+local function barra(padre, x, y, w, h, color)
+	local fondo = caja(padre, x, y, w, h, FONDO_BARRA)
+	local lleno = caja(fondo, 0, 0, w, h, color)
+	return {fondo = fondo, lleno = lleno, w = w, h = h}
+end
+
+local function poner_barra(b, valor, max)
+	local f = math.max(0, math.min(1, valor / max))
+	gui.set_size(b.lleno, v3(b.w * f, b.h))
+end
+
+-- Un botón de menú. `accion` se llama al apretarlo.
+local function boton(padre, x, y, w, h, s, accion, apagado)
+	local b = {accion = accion, apagado = apagado or false}
+	b.nodo = caja(padre, x, y, w, h, apagado and BOTON_APAGADO or BOTON, "redondo")
+	b.borde = caja(b.nodo, 0, 0, w, h, BOTON_BORDE, "borde")
+	gui.set_enabled(b.borde, false)
+	b.texto = texto(b.nodo, w / 2, -h / 2, s, "normal", apagado and vmath.vector4(0.55, 0.55, 0.55, 1) or BLANCO, gui.PIVOT_CENTER)
+	return b
+end
+
+local function marcar(b, foco)
+	if b.apagado then
+		return
+	end
+	gui.set_color(b.nodo, foco and BOTON_FOCO or BOTON)
+	gui.set_enabled(b.borde, foco)
+end
+
+-- --- Lista de botones con foco (menús, tienda, pesca, inicio) ---
+
+local function enfocar(lista, i)
+	for j, b in ipairs(lista.botones) do
+		marcar(b, j == i)
+	end
+	lista.foco = i
+end
+
+local function primer_libre(lista, desde)
+	local n = #lista.botones
+	for k = 0, n - 1 do
+		local i = (desde - 1 + k) % n + 1
+		if not lista.botones[i].apagado then
+			return i
+		end
+	end
+	return desde
+end
+
+local function mover_foco(lista, paso)
+	local n = #lista.botones
+	local i = lista.foco
+	for _ = 1, n do
+		i = (i - 1 + paso) % n + 1
+		if not lista.botones[i].apagado then
+			enfocar(lista, i)
+			return
+		end
+	end
+end
+
+local function apretar_boton(self, b)
+	if b.apagado then
+		return
+	end
+	estado.sonar("clic", -6)
+	b.accion(self)
+end
+
+-- Navega una lista. Devuelve true si usó la entrada.
+local function navegar(self, lista, nombre, recien, action_id, action)
+	if recien then
+		if nombre == "move_up" or nombre == "move_left" then
+			mover_foco(lista, -1)
+			return true
+		elseif nombre == "move_down" or nombre == "move_right" then
+			mover_foco(lista, 1)
+			return true
+		elseif nombre == "interact" then
+			local b = lista.botones[lista.foco]
+			if b then
+				apretar_boton(self, b)
+			end
+			return true
+		end
+	end
+	local puntos = {}
+	if action_id == H_TOQUE and action.touch then
+		for _, t in ipairs(action.touch) do
+			if t.pressed then
+				table.insert(puntos, t)
+			end
+		end
+	elseif action_id == H_CLIC and action.pressed and entrada.modo ~= entrada.TACTIL then
+		table.insert(puntos, action)
+	end
+	for _, t in ipairs(puntos) do
+		for i, b in ipairs(lista.botones) do
+			if not b.apagado and gui.pick_node(b.nodo, t.x, t.y) then
+				enfocar(lista, i)
+				apretar_boton(self, b)
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- --- Barra superior ---
+
+local function armar_barra_superior(self)
+	local fondo = caja(nil, REF_W / 2, REF_H, REF_W, 120, COLOR_PANEL, nil, gui.PIVOT_N)
+	gui.set_adjust_mode(fondo, gui.ADJUST_STRETCH)
+	gui.set_yanchor(fondo, gui.ANCHOR_TOP)
+	gui.set_layer(fondo, "hud")
+	local linea = caja(nil, REF_W / 2, REF_H - 120, REF_W, 3, COLOR_BORDE, nil, gui.PIVOT_N)
+	gui.set_adjust_mode(linea, gui.ADJUST_STRETCH)
+	gui.set_yanchor(linea, gui.ANCHOR_TOP)
+	gui.set_layer(linea, "hud")
+	self.barra_linea = linea
+	self.barra_fondo = fondo
+	local g = grupo(nil, 0, REF_H, "hud")
+	gui.set_xanchor(g, gui.ANCHOR_LEFT)
+	gui.set_yanchor(g, gui.ANCHOR_TOP)
+	self.barra_sup = g
+	self.reloj = texto(g, 28, -12, "", "normal")
+	self.barras = {}
+	local defs = {
+		{"vida", "Vida", {0.85, 0.25, 0.25}}, {"energia", "Energía", {0.9, 0.75, 0.25}},
+		{"marea", "Marea", {0.25, 0.55, 0.85}}, {"cerro", "Cerro", {0.45, 0.7, 0.35}},
+		{"juicio", "Juicio", {0.75, 0.6, 0.9}}, {"aldea", "Quicaví", {0.85, 0.7, 0.45}},
+	}
+	for i, d in ipairs(defs) do
+		local x = 28 + (i - 1) * 164
+		texto(g, x, -50, d[2], "chica")
+		self.barras[d[1]] = barra(g, x, -76, 150, 22, v4(d[3]))
+	end
+	self.recursos = {}
+	local lista = {}
+	for _, r in ipairs(estado.RECURSOS) do
+		table.insert(lista, r)
+	end
+	table.insert(lista, "finaos")
+	for i, r in ipairs(lista) do
+		local col, fila = (i - 1) % 5, math.floor((i - 1) / 5)
+		local x, y = 1030 + col * 176, -12 - fila * 50
+		local icono = caja(g, x + 20, y - 20, 40, 40, BLANCO, nil, gui.PIVOT_CENTER)
+		gui.set_texture(icono, "figuras")
+		if r == "finaos" then
+			gui.play_flipbook(icono, "finao_muralla_frente")
+			gui.set_size(icono, v3(30, 40))
+		else
+			gui.play_flipbook(icono, "item_" .. r)
+		end
+		self.recursos[r] = texto(g, x + 48, y - 6, "0", "nota")
+	end
+end
+
+local function armar_jefe_y_aviso(self)
+	local g = grupo(nil, REF_W / 2, 0, "hud")
+	gui.set_yanchor(g, gui.ANCHOR_BOTTOM)
+	self.abajo = g
+	self.jefe = grupo(g, 0, 0)
+	self.jefe_nombre = texto(self.jefe, 0, 236, "", "normal", BLANCO, gui.PIVOT_CENTER)
+	local fondo = caja(self.jefe, -360, 214, 720, 18, FONDO_BARRA)
+	self.jefe_barra = {fondo = fondo, lleno = caja(fondo, 0, 0, 720, 18, vmath.vector4(0.7, 0.2, 0.25, 1)), w = 720, h = 18}
+	gui.set_enabled(self.jefe, false)
+	self.aviso = texto(g, 0, 140, "", "normal", BLANCO, gui.PIVOT_CENTER)
+	-- Los avisos de la partida, arriba a la izquierda.
+	local n = grupo(nil, 24, REF_H - 150, "hud")
+	gui.set_xanchor(n, gui.ANCHOR_LEFT)
+	gui.set_yanchor(n, gui.ANCHOR_TOP)
+	self.notas_grupo = n
+	self.notas = {}
+end
+
+local function ordenar_notas(self)
+	local y = 0
+	for _, nota in ipairs(self.notas) do
+		gui.set_position(nota.nodo, v3(0, y))
+		y = y - alto_texto(nota.nodo) - 6
+	end
+end
+
+local function agregar_nota(self, s)
+	local n = texto(self.notas_grupo, 0, 0, s, "nota", BLANCO, gui.PIVOT_NW, 900)
+	table.insert(self.notas, {nodo = n, vida = 6})
+	while #self.notas > 4 do
+		gui.delete_node(table.remove(self.notas, 1).nodo)
+	end
+	ordenar_notas(self)
+end
+
+local function actualizar_notas(self, dt)
+	local cambio = false
+	for i = #self.notas, 1, -1 do
+		local nota = self.notas[i]
+		nota.vida = nota.vida - dt
+		if nota.vida <= 0 then
+			gui.delete_node(nota.nodo)
+			table.remove(self.notas, i)
+			cambio = true
+		elseif nota.vida < 1 then
+			gui.set_color(nota.nodo, vmath.vector4(1, 1, 1, nota.vida))
+			gui.set_outline(nota.nodo, vmath.vector4(0, 0, 0, nota.vida))
+		end
+	end
+	if cambio then
+		ordenar_notas(self)
+	end
+end
+
+-- --- Noche ---
+
+local function armar_noche(self)
+	local luz = caja(nil, REF_W / 2, REF_H / 2, 940, 940, BLANCO, "linterna", gui.PIVOT_CENTER)
+	gui.set_layer(luz, "noche")
+	self.luz = luz
+	self.sombras = {
+		caja(luz, -470 - 2500, 0, 5000, 10000, BLANCO, "blanco", gui.PIVOT_CENTER),
+		caja(luz, 470 + 2500, 0, 5000, 10000, BLANCO, "blanco", gui.PIVOT_CENTER),
+		caja(luz, 0, 470 + 2500, 940, 5000, BLANCO, "blanco", gui.PIVOT_CENTER),
+		caja(luz, 0, -470 - 2500, 940, 5000, BLANCO, "blanco", gui.PIVOT_CENTER),
+	}
+end
+
+local function actualizar_noche(self)
+	local d = estado.oscuridad()
+	local activo = estado.corriendo and mundo.jugador ~= nil and d > 0.01
+	gui.set_enabled(self.luz, activo)
+	if not activo then
+		return
+	end
+	local c = {0.03, 0.04, 0.14}
+	local alfa = d * 0.72
+	if estado.fase == estado.ATARDECER then
+		local t = 0.35 * (1 - math.abs(d - 0.5) * 2)
+		c = {c[1] + (0.6 - c[1]) * t, c[2] + (0.28 - c[2]) * t, c[3] + (0.12 - c[3]) * t}
+		alfa = math.max(alfa, t * 0.5)
+	end
+	local color = v4(c, alfa)
+	gui.set_color(self.luz, color)
+	for _, s in ipairs(self.sombras) do
+		gui.set_color(s, color)
+	end
+	local p = mundo.jugador
+	local fx, fy = vista.en_pantalla(p.x, p.y - 20)
+	gui.set_position(self.luz, v3(fx * REF_W, fy * REF_H))
+	-- La linterna se agranda cuando oscurece del todo.
+	local r = 0.6 + 0.4 * d
+	gui.set_scale(self.luz, vmath.vector3(r, r, 1))
+end
+
+-- --- Diálogos ---
+
+local function armar_dialogo(self)
+	local g = grupo(nil, REF_W / 2, 0, "dialogo")
+	gui.set_yanchor(g, gui.ANCHOR_BOTTOM)
+	self.dialogo = g
+	local p = panel(g, -840, 300, 1680, 260)
+	self.quien = texto(p, 28, -24, "", "normal", vmath.vector4(1, 0.8, 0.45, 1))
+	self.dicho = texto(p, 28, -68, "", "normal", BLANCO, gui.PIVOT_NW, 1620)
+	texto(p, 1652, -226, "Toca o pulsa Acción para seguir", "chica", vmath.vector4(1, 1, 1, 0.6), gui.PIVOT_NE)
+	gui.set_enabled(g, false)
+	self.lineas = {}
+	self.hablando = false
+end
+
+local function siguiente_linea(self)
+	if #self.lineas == 0 then
+		self.hablando = false
+		gui.set_enabled(self.dialogo, false)
+		estado.set_bloqueo(false)
+		return
+	end
+	local l = table.remove(self.lineas, 1)
+	gui.set_text(self.quien, l[1])
+	gui.set_enabled(self.quien, l[1] ~= "")
+	gui.set_text(self.dicho, l[2])
+	gui.set_position(self.dicho, v3(28, l[1] ~= "" and -68 or -30))
+end
+
+local function mostrar_dialogo(self, lineas)
+	for _, l in ipairs(lineas) do
+		table.insert(self.lineas, l)
+	end
+	if not self.hablando then
+		self.hablando = true
+		gui.set_enabled(self.dialogo, true)
+		siguiente_linea(self)
+	end
+end
+
+-- --- Ventanas ---
+
+local function cerrar_ventana(self)
+	if not self.ventana then
+		return
+	end
+	gui.delete_node(self.ventana.nodo)
+	self.ventana = nil
+	estado.set_bloqueo(false)
+end
+
+-- Arma una ventana centrada con título, un texto y una lista de botones.
+-- `botones` es una lista de {texto, función, apagado}.
+local function abrir_ventana(self, tipo, titulo, info, botones, foco, extra)
+	if self.ventana then
+		gui.delete_node(self.ventana.nodo)
+	end
+	local w = 816
+	local raiz = grupo(nil, REF_W / 2, REF_H / 2, "ventana")
+	local cuerpo = grupo(raiz, 0, 0)
+	local y = -28
+	texto(cuerpo, 28, y, titulo, "grande")
+	y = y - 52
+	if info and info ~= "" then
+		local n = texto(cuerpo, 28, y, info, "normal", BLANCO, gui.PIVOT_NW, 760)
+		y = y - alto_texto(n) - 14
+	end
+	if extra then
+		y = extra(cuerpo, y)
+	end
+	local lista = {botones = {}, foco = 1}
+	for _, b in ipairs(botones) do
+		local h = b.alto or 84
+		table.insert(lista.botones, boton(cuerpo, 28, y, 760, h, b[1], b[2], b[3]))
+		y = y - h - 14
+	end
+	local h = -y + 14
+	local fondo = panel(raiz, -w / 2, h / 2, w, h)
+	gui.move_below(fondo, cuerpo)
+	gui.set_position(cuerpo, v3(-w / 2, h / 2))
+	self.ventana = {nodo = raiz, tipo = tipo, lista = lista}
+	enfocar(lista, primer_libre(lista, foco or 1))
+	estado.set_bloqueo(true)
+end
+
+-- --- Almacén ---
+
+local abrir_tienda
+
+local function foco_actual(self)
+	return self.ventana and self.ventana.lista.foco or 1
+end
+
+abrir_tienda = function(self, foco)
+	local bono = tienda.bono() > 1 and " Don Fermín regatea un 20 por ciento más." or ""
+	local botones = {}
+	for _, v in ipairs(tienda.VENTA) do
+		local res = v[1]
+		local precio = tienda.precio_venta(v[2])
+		local n = estado.cantidad(res)
+		table.insert(botones, {string.format("Vender %s a %d c/u", estado.cuanto(res, n), precio), function(s)
+			tienda.vender(res, precio)
+			abrir_tienda(s, foco_actual(s))
+		end, n == 0})
+	end
+	for _, c in ipairs(tienda.COMPRA) do
+		local res, precio = c[1], c[2]
+		table.insert(botones, {string.format("Comprar %s por %d pesos", estado.cuanto(res, 1), precio), function(s)
+			tienda.comprar(res, precio)
+			abrir_tienda(s, foco_actual(s))
+		end, estado.cantidad("pesos") < precio})
+	end
+	table.insert(botones, {"Volver", cerrar_ventana})
+	abrir_ventana(self, "tienda", "Almacén de Lucio",
+		string.format("Tienes %d pesos.%s", estado.cantidad("pesos"), bono), botones, foco)
+end
+
+-- --- Panel de un Finao ---
+
+local abrir_finao
+
+abrir_finao = function(self, f, foco)
+	self.finao = f
+	local botones = {
+		{string.format("Trabajo de día: %s (cambiar)", finao.NOMBRE_TRABAJO[f.trabajo]), function(s)
+			local i = 1
+			for j, t in ipairs(finao.TRABAJOS) do
+				if t == f.trabajo then
+					i = j
+				end
+			end
+			f.trabajo = finao.TRABAJOS[i % #finao.TRABAJOS + 1]
+			abrir_finao(s, f, 1)
+		end},
+		{"Sale de noche en la cuadrilla: " .. (f.en_cuadrilla and "Sí" or "No"), function(s)
+			f.en_cuadrilla = not f.en_cuadrilla
+			abrir_finao(s, f, 2)
+		end},
+		{string.format("Darle chicha (+30 moral, quedan %d)", estado.cantidad("chicha")), function(s)
+			if estado.gastar({chicha = 1}) then
+				f.moral = math.min(100, f.moral + 30)
+				estado.decir(f.nombre .. " se toma la chicha y se le ve más contento. Dentro de lo posible.")
+			end
+			abrir_finao(s, f, 3)
+		end, estado.cantidad("chicha") == 0},
+		{"Volver", cerrar_ventana},
+	}
+	abrir_ventana(self, "finao", "Finao", finao.resumen(f), botones, foco)
+end
+
+-- --- Pesca ---
+
+local function abrir_pesca(self)
+	pesca.empezar()
+	local botones = {
+		{"¡Tirar la red!", function()
+			pesca.tirar()
+		end},
+		{"Volver", cerrar_ventana},
+	}
+	abrir_ventana(self, "pesca", "Pesca en el muelle", nil, botones, 1, function(cuerpo, y)
+		-- Los intentos y la marea, y la barra con la zona buena y la marca.
+		self.pesca_info = texto(cuerpo, 28, y, "", "normal", BLANCO, gui.PIVOT_NW, 760)
+		y = y - 110
+		local fondo = caja(cuerpo, 28, y, 760, 70, vmath.vector4(0.1, 0.2, 0.3, 1))
+		self.pesca_zona = caja(fondo, 0, 0, 10, 70, vmath.vector4(0.3, 0.75, 0.35, 1))
+		self.pesca_marca = caja(fondo, 0, 8, 12, 86, BLANCO, nil, gui.PIVOT_N)
+		return y - 70 - 24
+	end)
+end
+
+local function actualizar_pesca(self, dt)
+	pesca.tick(dt)
+	gui.set_text(self.pesca_info, pesca.info())
+	gui.set_position(self.pesca_zona, v3((pesca.centro - pesca.ancho / 2) * 760, 0))
+	gui.set_size(self.pesca_zona, v3(pesca.ancho * 760, 70))
+	gui.set_position(self.pesca_marca, v3(pesca.marca * 760 - 6, 8))
+	local tirar = self.ventana.lista.botones[1]
+	if pesca.intentos == 0 and not tirar.apagado then
+		marcar(tirar, false)
+		tirar.apagado = true
+		gui.set_color(tirar.nodo, BOTON_APAGADO)
+		enfocar(self.ventana.lista, 2)
+	end
+end
+
+-- --- Menú de pausa y fin de la demo ---
+
+local abrir_inicio
+
+local function salir_al_inicio(self)
+	cerrar_ventana(self)
+	self.lineas = {}
+	siguiente_linea(self)
+	msg.post("#script", "salir")
+	abrir_inicio(self)
+end
+
+local function abrir_menu(self, foco)
+	local botones = {
+		{"Seguir jugando", cerrar_ventana},
+		{"Música: " .. (vista.musica and "Sí" or "No"), function(s)
+			vista.musica = not vista.musica
+			abrir_menu(s, 2)
+		end},
+		{"Guardar partida", function(s)
+			estado.guardar(mundo.a_tablas())
+			estado.decir("Partida guardada.")
+			cerrar_ventana(s)
+		end},
+		{"Salir al inicio", salir_al_inicio},
+	}
+	abrir_ventana(self, "menu", "Pausa",
+		"Mando: stick para moverse, A acción, X arpón, B esquivar, Y Revisorio, LT + stick para órdenes. Teclado: WASD, E, J, K, L y Q.",
+		botones, foco)
+end
+
+local function abrir_fin(self)
+	local texto_fin = string.format(
+		"Abdón sobrevivió tres días en Quicaví.\n\nFinaos: %d. Pesos: %d. Trofeos: %d.\nMarea %d, Cerro %d, Juicio %d, Quicaví %d.\n\nEn el juego completo, la Marea Bruja recién empieza.",
+		#mundo.finaos(), estado.cantidad("pesos"), estado.cantidad("trofeo"),
+		estado.marea, estado.cerro, estado.juicio, estado.aldea)
+	abrir_ventana(self, "fin", "Fin de la demo", texto_fin, {
+		{"Seguir jugando", cerrar_ventana},
+		{"Volver al inicio", salir_al_inicio},
+	})
+end
+
+-- --- Pantalla de inicio ---
+
+local function cerrar_inicio(self)
+	if self.inicio then
+		gui.delete_node(self.inicio.fondo)
+		gui.delete_node(self.inicio.nodo)
+		self.inicio = nil
+	end
+end
+
+local function empezar_partida(self, cargar)
+	cerrar_inicio(self)
+	msg.post("#script", "empezar", {cargar = cargar})
+end
+
+abrir_inicio = function(self)
+	cerrar_inicio(self)
+	local fondo = caja(nil, REF_W / 2, REF_H / 2, REF_W, REF_H, vmath.vector4(0.06, 0.09, 0.13, 1), nil, gui.PIVOT_CENTER)
+	gui.set_adjust_mode(fondo, gui.ADJUST_STRETCH)
+	gui.set_layer(fondo, "titulo")
+	local g = grupo(nil, REF_W / 2, REF_H / 2, "titulo")
+	local figura = caja(g, 0, 330, 96, 128, BLANCO, nil, gui.PIVOT_CENTER)
+	gui.set_texture(figura, "figuras")
+	gui.play_flipbook(figura, "abdon_frente")
+	texto(g, 0, 200, "MAREA BRUJA", "titulo", vmath.vector4(0.9, 0.8, 0.55, 1), gui.PIVOT_CENTER)
+	texto(g, 0, 110, "Quicaví, Chiloé. Otoño de 1960. Demo del acto I.", "normal", BLANCO, gui.PIVOT_CENTER)
+	local lista = {botones = {}, foco = 1}
+	local y = 40
+	table.insert(lista.botones, boton(g, -260, y, 520, 96, "Nueva partida", function(s) empezar_partida(s, false) end))
+	y = y - 120
+	if estado.hay_guardado() then
+		table.insert(lista.botones, boton(g, -260, y, 520, 96, "Continuar", function(s) empezar_partida(s, true) end))
+		y = y - 120
+	end
+	texto(g, 0, y - 20, "Se juega con la pantalla táctil, con un mando o con el teclado.", "chica", BLANCO, gui.PIVOT_CENTER)
+	self.inicio = {fondo = fondo, nodo = g, lista = lista}
+	enfocar(lista, #lista.botones)
+end
+
+-- --- Rueda de órdenes ---
+
+local function armar_rueda(self)
+	local g = grupo(nil, REF_W / 2, REF_H / 2, "ventana")
+	self.rueda = {nodo = g, botones = {}, marcado = 0, sostenida = false}
+	for i, r in ipairs(RUEDA) do
+		local b = boton(g, r.x - 130, r.y + 45, 260, 90, r.texto, function(s)
+			gui.set_enabled(s.rueda.nodo, false)
+			mundo.dar_orden(r.orden)
+		end)
+		self.rueda.botones[i] = b
+	end
+	gui.set_enabled(g, false)
+end
+
+local function rueda_abierta(self)
+	return gui.is_enabled(self.rueda.nodo)
+end
+
+local function abrir_rueda(self)
+	self.rueda.marcado = 0
+	for _, b in ipairs(self.rueda.botones) do
+		marcar(b, false)
+	end
+	gui.set_enabled(self.rueda.nodo, true)
+end
+
+-- Con mando o teclado: mantener LT (o Q), elegir con un stick y soltar.
+local function actualizar_rueda(self)
+	if entrada.modo == entrada.TACTIL then
+		return
+	end
+	local r = self.rueda
+	local apretada = entrada.apretado("squad_wheel") and not estado.pausa
+	if apretada and not r.sostenida and not estado.bloqueo then
+		r.sostenida = true
+		estado.bloqueo = true
+		abrir_rueda(self)
+	end
+	if not r.sostenida then
+		return
+	end
+	if apretada then
+		local x, y = entrada.apuntar()
+		if math.sqrt(x * x + y * y) < 0.4 then
+			x, y = entrada.mover()
+		end
+		if math.sqrt(x * x + y * y) >= 0.4 then
+			if math.abs(x) > math.abs(y) then
+				r.marcado = x > 0 and 2 or 4
+			else
+				r.marcado = y > 0 and 3 or 1
+			end
+			for i, b in ipairs(r.botones) do
+				marcar(b, i == r.marcado)
+			end
+		end
+	else
+		r.sostenida = false
+		estado.set_bloqueo(false)
+		gui.set_enabled(r.nodo, false)
+		if r.marcado > 0 then
+			mundo.dar_orden(RUEDA[r.marcado].orden)
+		end
+	end
+end
+
+-- --- Controles táctiles ---
+
+local function armar_tactil(self)
+	local der = grupo(nil, REF_W, 0, "tactil")
+	gui.set_xanchor(der, gui.ANCHOR_RIGHT)
+	gui.set_yanchor(der, gui.ANCHOR_BOTTOM)
+	local arriba = grupo(nil, REF_W, REF_H, "tactil")
+	gui.set_xanchor(arriba, gui.ANCHOR_RIGHT)
+	gui.set_yanchor(arriba, gui.ANCHOR_TOP)
+	local izq = grupo(nil, 0, 0, "tactil")
+	gui.set_xanchor(izq, gui.ANCHOR_LEFT)
+	gui.set_yanchor(izq, gui.ANCHOR_BOTTOM)
+	self.tactil = {der = der, arriba = arriba, izq = izq, botones = {}, toques = {}}
+	for _, b in ipairs(BOTONES_TACTILES) do
+		local padre = b.arriba and arriba or der
+		local d = RADIO_BOTON * 2
+		local fondo = caja(padre, b.x, b.y, d, d, v4(b.color, 0.45), "circulo", gui.PIVOT_CENTER)
+		caja(fondo, 0, 0, d, d, vmath.vector4(1, 1, 1, 0.6), "anillo", gui.PIVOT_CENTER)
+		texto(fondo, 0, 0, b.texto, "chica", BLANCO, gui.PIVOT_CENTER)
+		table.insert(self.tactil.botones, {def = b, nodo = fondo})
+	end
+	local d = RADIO_JOY * 2
+	self.tactil.joy = caja(izq, 240, 240, d, d, vmath.vector4(1, 1, 1, 0.12), "circulo", gui.PIVOT_CENTER)
+	self.tactil.joy_borde = caja(self.tactil.joy, 0, 0, d, d, vmath.vector4(1, 1, 1, 0.5), "anillo", gui.PIVOT_CENTER)
+	self.tactil.pomo = caja(self.tactil.joy, 0, 0, 110, 110, vmath.vector4(1, 1, 1, 0.3), "circulo", gui.PIVOT_CENTER)
+end
+
+-- Escala de la interfaz en la pantalla real y el tamaño de la ventana.
+local function escala_pantalla()
+	local w, h = window.get_size()
+	if w == 0 or h == 0 then
+		w, h = REF_W, REF_H
+	end
+	return math.min(w / REF_W, h / REF_H), w, h
+end
+
+local function boton_tactil_en(self, sx, sy)
+	local s, w, h = escala_pantalla()
+	for _, b in ipairs(self.tactil.botones) do
+		local cx = w + b.def.x * s
+		local cy = b.def.arriba and (h + b.def.y * s) or (b.def.y * s)
+		local dx, dy = sx - cx, sy - cy
+		if math.sqrt(dx * dx + dy * dy) < RADIO_BOTON * s then
+			return b
+		end
+	end
+end
+
+local function soltar_joystick(self)
+	self.tactil.joy_id = nil
+	entrada.joy_x, entrada.joy_y = 0, 0
+end
+
+-- Lee los dedos en la pantalla: joystick a la izquierda, botones a la derecha.
+local function toques(self, action)
+	local t = self.tactil
+	local s, w, h = escala_pantalla()
+	for _, p in ipairs(action.touch or {}) do
+		local sx, sy = p.screen_x or p.x, p.screen_y or p.y
+		if p.pressed then
+			local b = boton_tactil_en(self, sx, sy)
+			if b then
+				t.toques[p.id] = b
+				local a = b.def.accion
+				if a == "menu" then
+					if not estado.pausa then
+						abrir_menu(self)
+					end
+				elseif a == "squad_wheel" then
+					if rueda_abierta(self) then
+						gui.set_enabled(self.rueda.nodo, false)
+					else
+						abrir_rueda(self)
+					end
+				else
+					entrada.apretar(a, 1)
+				end
+			elseif t.joy_id == nil and sx < w * 0.45 and sy < h * 0.65 then
+				t.joy_id = p.id
+				t.joy_x, t.joy_y = sx, sy
+				entrada.joy_x, entrada.joy_y = 0, 0
+			end
+		elseif p.released then
+			local b = t.toques[p.id]
+			if b then
+				entrada.soltar(b.def.accion)
+				t.toques[p.id] = nil
+			end
+			if p.id == t.joy_id then
+				soltar_joystick(self)
+			end
+		elseif p.id == t.joy_id then
+			local dx, dy = (sx - t.joy_x) / (RADIO_JOY * s), -(sy - t.joy_y) / (RADIO_JOY * s)
+			local l = math.sqrt(dx * dx + dy * dy)
+			if l > 1 then
+				dx, dy = dx / l, dy / l
+			end
+			entrada.joy_x, entrada.joy_y = dx, dy
+		end
+	end
+end
+
+local function actualizar_tactil(self)
+	local t = self.tactil
+	local visible = entrada.modo == entrada.TACTIL and estado.corriendo and not self.inicio
+	for _, n in ipairs({t.der, t.arriba, t.izq}) do
+		gui.set_enabled(n, visible)
+	end
+	if not visible then
+		if t.joy_id then
+			soltar_joystick(self)
+		end
+		return
+	end
+	for _, b in ipairs(t.botones) do
+		local a = b.def.accion
+		local apretado = entrada.apretado(a)
+		gui.set_color(b.nodo, v4(b.def.color, apretado and 0.75 or 0.45))
+	end
+	local s = escala_pantalla()
+	if t.joy_id then
+		gui.set_position(t.joy, v3(t.joy_x / s, t.joy_y / s))
+		gui.set_color(t.joy_borde, vmath.vector4(1, 1, 1, 0.5))
+		gui.set_position(t.pomo, v3(entrada.joy_x * RADIO_JOY, -entrada.joy_y * RADIO_JOY))
+	else
+		gui.set_position(t.joy, v3(240, 240))
+		gui.set_color(t.joy_borde, vmath.vector4(1, 1, 1, 0.25))
+		gui.set_position(t.pomo, v3(0, 0))
+	end
+end
+
+-- --- Ciclo ---
+
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	armar_noche(self)
+	armar_barra_superior(self)
+	armar_jefe_y_aviso(self)
+	armar_tactil(self)
+	armar_rueda(self)
+	armar_dialogo(self)
+	self.prueba = sys.get_config_int("prueba.automatica", 0) == 1
+	if sys.get_sys_info().system_name == "Android" then
+		entrada.modo = entrada.TACTIL
+	end
+	local captura = sys.get_config_string("prueba.captura", "")
+	if not self.prueba and (captura == "" or captura:find("inicio", 1, true)) then
+		abrir_inicio(self)
+	end
+end
+
+local function atender_pedidos(self)
+	for _, a in ipairs(estado.avisos) do
+		agregar_nota(self, a)
+	end
+	estado.avisos = {}
+	if #estado.dialogos > 0 then
+		local lineas = estado.dialogos
+		estado.dialogos = {}
+		mostrar_dialogo(self, lineas)
+	end
+	for _, p in ipairs(estado.peticiones) do
+		local cual, dato = p[1], p[2]
+		if cual == "tienda" then
+			abrir_tienda(self, 1)
+		elseif cual == "pesca" then
+			abrir_pesca(self)
+		elseif cual == "finao" then
+			abrir_finao(self, dato, 1)
+		elseif cual == "fin" then
+			abrir_fin(self)
+		end
+	end
+	estado.peticiones = {}
+end
+
+local function actualizar_barras(self)
+	local hud = estado.corriendo and mundo.jugador ~= nil
+	gui.set_enabled(self.barra_fondo, hud)
+	gui.set_enabled(self.barra_linea, hud)
+	gui.set_enabled(self.barra_sup, hud)
+	gui.set_enabled(self.abajo, hud)
+	gui.set_enabled(self.notas_grupo, hud)
+	if not hud then
+		return
+	end
+	local p = mundo.jugador
+	local fase = estado.fase == estado.DIA and "" or " (" .. estado.NOMBRE_FASE[estado.fase] .. ")"
+	gui.set_text(self.reloj, string.format("Día %d · %s%s · %s%s", estado.dia, estado.reloj(), fase,
+		estado.nombre_marea(), estado.es_horda() and " · Noche de Marea Bruja" or ""))
+	poner_barra(self.barras.vida, p.hp, p.max_hp)
+	poner_barra(self.barras.energia, p.energia, 100)
+	poner_barra(self.barras.marea, estado.marea, 100)
+	poner_barra(self.barras.cerro, estado.cerro, 100)
+	poner_barra(self.barras.juicio, estado.juicio, 100)
+	poner_barra(self.barras.aldea, estado.aldea, 100)
+	for _, r in ipairs(estado.RECURSOS) do
+		gui.set_text(self.recursos[r], tostring(estado.cantidad(r)))
+	end
+	gui.set_text(self.recursos.finaos, tostring(#mundo.finaos()))
+	local jefes = mundo.jefes()
+	gui.set_enabled(self.jefe, #jefes > 0)
+	if #jefes > 0 then
+		gui.set_text(self.jefe_nombre, jefes[1].nombre)
+		poner_barra(self.jefe_barra, jefes[1].hp, jefes[1].max_hp)
+	end
+	if p.cercano and not self.ventana and not self.hablando then
+		local tecla = entrada.modo == entrada.TACTIL and "Acción" or entrada.boton("interact")
+		gui.set_text(self.aviso, string.format("[%s] %s", tecla, mundo.texto_accion(p.cercano)))
+	else
+		gui.set_text(self.aviso, "")
+	end
+end
+
+function update(self, dt)
+	if self.prueba then
+		gui.set_enabled(self.barra_fondo, false)
+		gui.set_enabled(self.barra_sup, false)
+		return
+	end
+	atender_pedidos(self)
+	estado.pausa = self.inicio ~= nil or self.hablando or self.ventana ~= nil
+	if self.hablando or self.ventana then
+		estado.bloqueo = true
+	end
+	actualizar_barras(self)
+	actualizar_notas(self, dt)
+	actualizar_rueda(self)
+	if self.ventana and self.ventana.tipo == "pesca" then
+		actualizar_pesca(self, dt)
+	end
+	actualizar_noche(self)
+	actualizar_tactil(self)
+end
+
+function on_message(self, message_id, message)
+	if message_id == hash("empezo") then
+		cerrar_inicio(self)
+	end
+end
+
+function on_input(self, action_id, action)
+	if action_id == nil then
+		return false
+	end
+	local nombre = ACCIONES[action_id]
+	-- El modo cambia solo según lo último que se usó.
+	if action_id == H_TOQUE then
+		entrada.modo = entrada.TACTIL
+	elseif action_id == H_MANDO then
+		local n = (action.gamepad_name or ""):lower()
+		entrada.playstation = n:find("ps") ~= nil or n:find("sony") ~= nil or n:find("dualsense") ~= nil or n:find("dualshock") ~= nil
+		entrada.modo = entrada.MANDO
+		return true
+	elseif action.gamepad ~= nil then
+		if (action.value or 0) > 0.5 then
+			entrada.modo = entrada.MANDO
+		end
+	elseif nombre and action.pressed then
+		entrada.modo = entrada.TECLADO
+	end
+	local recien = false
+	if nombre then
+		if action.released then
+			entrada.soltar(nombre)
+		else
+			local antes = entrada.apretado(nombre)
+			entrada.apretar(nombre, action.value or 1)
+			recien = not antes and entrada.apretado(nombre)
+		end
+	end
+	if self.prueba then
+		return true
+	end
+	local toque = action_id == H_TOQUE and action.touch ~= nil
+	local clic = action_id == H_CLIC and action.pressed and entrada.modo ~= entrada.TACTIL
+	if self.inicio then
+		navegar(self, self.inicio.lista, nombre, recien, action_id, action)
+		return true
+	end
+	if self.hablando then
+		local tocado = false
+		if toque then
+			for _, p in ipairs(action.touch) do
+				tocado = tocado or p.pressed
+			end
+		end
+		if (recien and nombre == "interact") or tocado or clic then
+			siguiente_linea(self)
+		end
+		return true
+	end
+	if self.ventana then
+		if recien and (nombre == "dodge" or nombre == "menu") then
+			cerrar_ventana(self)
+		else
+			navegar(self, self.ventana.lista, nombre, recien, action_id, action)
+		end
+		return true
+	end
+	if rueda_abierta(self) and entrada.modo == entrada.TACTIL and toque then
+		for _, p in ipairs(action.touch) do
+			if p.pressed then
+				for _, b in ipairs(self.rueda.botones) do
+					if gui.pick_node(b.nodo, p.x, p.y) then
+						apretar_boton(self, b)
+						return true
+					end
+				end
+			end
+		end
+	end
+	if toque and entrada.modo == entrada.TACTIL then
+		toques(self, action)
+	end
+	if recien and nombre == "menu" and estado.corriendo and not estado.bloqueo then
+		abrir_menu(self)
+	end
+	return true
+end

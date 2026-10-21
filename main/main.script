@@ -1,0 +1,202 @@
+-- Punto de entrada: arma la partida, mueve el mundo, toca los sonidos y la música.
+-- La interfaz (hud.gui_script) recibe la entrada y abre los menús.
+-- Con prueba.automatica = 1 juega la demo sola; con prueba.captura arma una escena para sacar capturas.
+local estado = require "juego.estado"
+local entrada = require "juego.entrada"
+local mundo = require "juego.mundo"
+local vista = require "juego.vista"
+local prueba = require "juego.prueba"
+
+local VOLUMEN_MUSICA = 0.32
+local PASOS_PRUEBA = 20
+
+local INTRO = {
+	{"", "Quicaví, Chiloé. Marzo de 1960."},
+	{"Abdón", "Anoche la red trajo un ahogado. Abrió los ojos y me pidió un cigarro."},
+	{"Abdón", "Venía con un libro envuelto en hule. Un Revisorio, con el nombre de mi papá en la primera página."},
+	{"Abdón", "El libro dice que con sal y brea, en la mesa de brujería, los muertos se levantan a trabajar."},
+	{"", "Ve a la mesa de brujería del palafito y reanima al ahogado."},
+}
+
+local function db(v)
+	return 10 ^ (v / 20)
+end
+
+local function tocar_sonidos()
+	for _, s in ipairs(estado.sonidos) do
+		local nombre, vol, variacion = s[1], s[2], s[3]
+		local rapidez = 1 + (math.random() * 2 - 1) * variacion
+		pcall(sound.play, "#" .. nombre, {gain = db(vol), speed = rapidez})
+	end
+	estado.sonidos = {}
+end
+
+-- La música cambia con un fundido de dos segundos entre el día y la noche.
+local function musica(self, dt)
+	local quiere = (estado.corriendo and estado.es_noche()) and "musica_noche" or "musica_dia"
+	if quiere ~= self.pista then
+		if self.pista then
+			self.saliendo = self.pista
+			self.vol_saliendo = self.vol
+		end
+		self.pista = quiere
+		self.vol = 0
+		pcall(sound.play, "#" .. quiere, {gain = 0})
+	end
+	local meta = vista.musica and VOLUMEN_MUSICA or 0
+	self.vol = math.min(meta, self.vol + dt * VOLUMEN_MUSICA / 2)
+	if not vista.musica then
+		self.vol = 0
+	end
+	pcall(sound.set_gain, "#" .. self.pista, self.vol)
+	if self.saliendo then
+		self.vol_saliendo = self.vol_saliendo - dt * VOLUMEN_MUSICA / 2
+		if self.vol_saliendo <= 0 or self.saliendo == self.pista then
+			if self.saliendo ~= self.pista then
+				pcall(sound.stop, "#" .. self.saliendo)
+			end
+			self.saliendo = nil
+		else
+			pcall(sound.set_gain, "#" .. self.saliendo, self.vol_saliendo)
+		end
+	end
+end
+
+local function empezar(cargar)
+	if not (cargar and estado.cargar()) then
+		estado.reiniciar()
+	end
+	mundo.nuevo()
+	vista.armar()
+	estado.corriendo = true
+	if not cargar then
+		estado.dialogo(INTRO)
+	end
+end
+
+local function buscar(titulo)
+	for _, s in ipairs(mundo.estaciones) do
+		if s.titulo == titulo then
+			return s
+		end
+	end
+end
+
+-- Arma una escena para revisar cómo se ve: día en el palafito o noche de horda en la playa.
+local function armar_captura(opciones)
+	local function tiene(o)
+		return opciones:find(o, 1, true) ~= nil
+	end
+	empezar(false)
+	estado.dialogos = {}
+	estado.sumar("cuerpo", 2)
+	estado.sumar("brea", 2)
+	local mesa = buscar("Mesa de brujería")
+	for _ = 1, 3 do
+		mundo.jugador.energia = 100
+		mundo.interactuar(mesa)
+	end
+	estado.dialogos = {}
+	local p = mundo.jugador
+	if tiene("noche") then
+		estado.dia = 3
+		estado.fase = estado.NOCHE
+		estado.tiempo = 40
+		estado.sumar("madera", 9)
+		for _, b in ipairs(mundo.barricadas) do
+			mundo.interactuar(b)
+		end
+		p.x, p.y = 2250, 1300
+		for i = 0, 5 do
+			mundo.nuevo_ente("ahogado", 2000 + i * 90, 1560 + (i % 2) * 60, true)
+		end
+		for _, f in ipairs(mundo.finaos()) do
+			f.x, f.y = 2150 + math.random(-80, 80), 1330
+		end
+		if tiene("jefes") then
+			mundo.nuevo_ente("invunche", 2420, 1480, true)
+			mundo.nuevo_ente("chonchon", 2080, 1180, false)
+		end
+		mundo.olas = 3
+		mundo.jefe_salio = true
+	else
+		p.x, p.y = 960, 1150
+		estado.tiempo = 200
+	end
+	vista.camara.x, vista.camara.y = p.x, 2000 - p.y
+	if tiene("tactil") then
+		entrada.modo = entrada.TACTIL
+	end
+	if tiene("tienda") then
+		estado.sumar("pescado_ahumado", 4)
+		estado.pedir("tienda")
+	end
+	if tiene("finao") then
+		estado.pedir("finao", mundo.finaos()[1])
+	end
+	estado.decir(string.format("Día %d. La marea dejó ahogados en la playa.", estado.dia))
+	if tiene("dialogo") then
+		estado.dialogo({{"Don Fermín", "Patrón, el mar está raro. Los ahogados de Cai Cai van a subir a la iglesia."}})
+	end
+end
+
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	math.randomseed(os.time())
+	vista.musica = true
+	self.cuadros = 0
+	self.prueba = sys.get_config_int("prueba.automatica", 0) == 1
+	self.captura = sys.get_config_string("prueba.captura", "")
+	vista.modo_prueba = self.prueba
+	-- Para revisar otras pantallas: prueba.ventana = 2400x1080 (solo en escritorio).
+	local w, h = sys.get_config_string("prueba.ventana", ""):match("^(%d+)x(%d+)$")
+	if w and window.set_size then
+		window.set_size(tonumber(w), tonumber(h))
+	end
+	if self.prueba then
+		prueba.empezar()
+		vista.armar()
+	elseif self.captura:find("inicio", 1, true) then
+		return
+	elseif self.captura ~= "" then
+		armar_captura(self.captura)
+		msg.post("#hud", "empezo")
+	end
+end
+
+function update(self, dt)
+	self.cuadros = self.cuadros + 1
+	if self.prueba then
+		for _ = 1, PASOS_PRUEBA do
+			local listo, ok = prueba.paso(1 / 60)
+			if listo then
+				sys.exit(ok and 0 or 1)
+				return
+			end
+		end
+		vista.actualizar(dt)
+		return
+	end
+	if estado.corriendo and not estado.pausa then
+		estado.tick(dt)
+		mundo.tick(dt)
+	end
+	vista.actualizar(dt)
+	tocar_sonidos()
+	musica(self, dt)
+	entrada.fin_cuadro()
+	if self.captura ~= "" and self.cuadros == 90 then
+		print("CAPTURA LISTA")
+	end
+end
+
+function on_message(self, message_id, message)
+	if message_id == hash("empezar") then
+		empezar(message.cargar)
+	elseif message_id == hash("salir") then
+		estado.corriendo = false
+		estado.pausa = false
+		vista.limpiar()
+		mundo.jugador = nil
+	end
+end

@@ -30,40 +30,48 @@ La interfaz cambia sola entre táctil y mando según lo último que se usó.
 | Órdenes | Mantener LT / L2 y elegir con un stick | Mantener Q y elegir con WASD | Botón Cuadrilla |
 | Pausa | Menú / Options | Esc | Botón Menú |
 
+## Motor
+
+El juego está hecho en [Defold](https://defold.com) 1.10 con Lua. La versión anterior en Godot quedó en el historial de git (rama `demo-acto-1`).
+
 ## Cómo abrirlo
 
-1. Instala [Godot 4.3](https://godotengine.org/download/archive/4.3-stable/).
-2. Abre `project.godot` desde el gestor de proyectos y pulsa F5.
+1. Instala [Defold](https://defold.com/download/) 1.10.
+2. Abre `game.project` y pulsa **Proyecto > Compilar** (Ctrl+B).
 
-## Instalar en la tablet sin Godot
+## Instalar en la tablet
 
 GitHub Actions arma un APK de depuración en cada cambio. En la pestaña **Actions** del repositorio, abre la última ejecución de **Prueba de la demo**, baja hasta **Artifacts** y descarga `marea-bruja-apk`. Descomprime el zip, copia el APK a la tablet y ábrelo. Android va a pedir permiso para instalar apps de origen desconocido.
 
-## Cómo exportarlo a una tablet Android desde Godot
+Para armarlo a mano no hace falta el SDK de Android, solo Java 21 y `bob.jar` de la misma versión de Defold:
 
-1. En Godot, ve a **Editor > Administrar plantillas de exportación** y descarga las de 4.3.
-2. En **Editor > Configuración del editor > Exportar > Android**, configura el SDK de Android y un keystore de depuración (Godot puede crearlo solo).
-3. Ve a **Proyecto > Exportar**, elige el preset **Android** y pulsa **Exportar proyecto**. Sale un `build/marea-bruja.apk`.
-4. Copia el APK a la tablet y ábrelo, o instálalo con `adb install build/marea-bruja.apk`.
+```
+java -jar bob.jar --root . --platform arm64-android --architectures arm64-android \
+  --variant debug --archive --bundle-format apk --bundle-output build/android resolve build bundle
+```
 
 ## Pruebas
 
-La prueba automática juega los tres días a velocidad alta y revisa la pesca, el ahumadero, la tienda, los Finaos, las barricadas, la horda y el guardado:
+La prueba automática juega los tres días a velocidad alta y revisa la pesca, el ahumadero, la tienda, los Finaos, las barricadas, la horda, los subjefes y el guardado. La lógica del juego no depende del motor, así que corre también con LuaJIT a secas:
 
 ```
-godot --headless --path . --fixed-fps 60 -- --smoke
+luajit tools/prueba.lua
 ```
 
-Los personajes y entes miden 64 píxeles, con luz y sombra suave, y tienen tres vistas (frente, espalda y lado) con cuadros de paso y de ataque. Al morir se caen y se apagan. Se dibujan en `tools/figuras.py` con formas simples a cuatro veces su tamaño que luego se reducen. Los suelos y edificios usan una paleta de 30 colores definida en `tools/arte.py`.
-
-Para sacar capturas (necesita pantalla, o `xvfb-run` en Linux):
+Y dentro del motor, con la versión compilada para Linux:
 
 ```
-godot --path . -- --screenshot=/tmp/dia.png
-godot --path . -- --screenshot=/tmp/noche.png --night --touch
+java -jar bob.jar --root . --platform x86_64-linux --variant debug --archive --bundle-output build/linux resolve build bundle
+"build/linux/Marea Bruja/MareaBruja.x86_64" --config=prueba.automatica=1
 ```
 
-GitHub Actions corre la prueba automática en cada PR.
+Para sacar capturas (en Linux, con xvfb e ImageMagick). Las opciones arman la escena: `noche`, `jefes`, `tactil`, `tienda`, `finao`, `dialogo` o `inicio`; también se puede dar el tamaño de pantalla:
+
+```
+tools/captura.sh /tmp/noche.png "noche jefes tactil" 2400 1080
+```
+
+GitHub Actions corre las dos pruebas en cada PR.
 
 ## Arte y sonido
 
@@ -74,16 +82,14 @@ python3 -m pip install pillow numpy
 python3 tools/generate_assets.py
 ```
 
-Escribe en `assets/sprites` y `assets/audio`. Godot los importa con filtro de píxel nítido, y la música queda en bucle.
+Escribe en `assets/sprites` y `assets/audio`. Después `tools/defold.py` hornea el suelo del mapa, dibuja las piezas de la interfaz y el ícono, y escribe los atlas de `main/` y `juego/tamanos.lua`.
+
+Los personajes y entes miden 64 píxeles, con luz y sombra suave, y tienen tres vistas (frente, espalda y lado) con cuadros de paso y de ataque. Al morir se caen y se apagan. Se dibujan en `tools/figuras.py` con formas simples a cuatro veces su tamaño que luego se reducen. Los suelos y edificios usan una paleta de 30 colores definida en `tools/arte.py`.
 
 ## Estructura
 
-- `scripts/autoload/`: estado de la partida (`game_state.gd`) y entrada táctil/mando (`input_setup.gd`).
-- `scripts/world/`: el mapa, la noche y las estaciones (muelle, ahumadero, mesa de brujería, barricadas...).
-- `scripts/units/`: Abdón, los Finaos y los entes.
-- `scripts/ui/`: la interfaz, los controles táctiles, la pesca y la rueda de órdenes.
-- `scripts/autoload/audio.gd`: efectos y música, con fundido entre el día y la noche.
-- `tools/generate_assets.py`: genera los sprites y los sonidos.
-- `tools/arte.py`: la paleta, los suelos y los edificios.
-- `tools/figuras.py`: personajes, entes, íconos de recursos y adornos.
-- `tools/edificios.py`: casas, iglesia, estaciones y árboles en tres cuartos.
+- `juego/`: la lógica en Lua sin nada del motor: estado y calendario, mundo y noche, Abdón, Finaos, entes, estaciones, tienda, pesca y la prueba. `juego/vista.lua` es lo único que dibuja.
+- `main/`: la colección principal, `main.script` (mueve el mundo, sonidos y música), `hud.gui_script` (interfaz, menús, mando y táctil), atlas, fuentes y sonidos.
+- `render/`: la cámara que sigue a Abdón y la interfaz encima.
+- `input/`: teclado, mando y pantalla táctil.
+- `tools/`: arte, sonido, prueba y capturas.

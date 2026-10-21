@@ -1,0 +1,50 @@
+script: "/main/hud.gui_script"
+fonts {
+  name: "chica"
+  font: "/main/fuentes/chica.font"
+}
+fonts {
+  name: "nota"
+  font: "/main/fuentes/nota.font"
+}
+fonts {
+  name: "normal"
+  font: "/main/fuentes/normal.font"
+}
+fonts {
+  name: "grande"
+  font: "/main/fuentes/grande.font"
+}
+fonts {
+  name: "titulo"
+  font: "/main/fuentes/titulo.font"
+}
+textures {
+  name: "ui"
+  texture: "/main/ui.atlas"
+}
+textures {
+  name: "figuras"
+  texture: "/main/figuras.atlas"
+}
+layers {
+  name: "noche"
+}
+layers {
+  name: "hud"
+}
+layers {
+  name: "tactil"
+}
+layers {
+  name: "ventana"
+}
+layers {
+  name: "dialogo"
+}
+layers {
+  name: "titulo"
+}
+material: "/builtins/materials/gui.material"
+adjust_reference: ADJUST_REFERENCE_PARENT
+max_nodes: 1024

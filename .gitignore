@@ -1,8 +1,10 @@
-# Godot
-.godot/
-export.cfg
-export_credentials.cfg
+# Defold
+.internal/
+build/
+*.der
+debug.keystore
+debug.keystore.pass.txt
 *.apk
 *.aab
-build/
 __pycache__/
+.godot/
